@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đặt hàng thành công | CHERI.</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+
+    <style>
+        .success-page {
+            max-width: 760px;
+            margin: 50px auto;
+            padding: 24px;
+        }
+
+        .success-card {
+            padding: 32px;
+            background: #fff;
+            border: 1px solid #f0dce5;
+            border-radius: 16px;
+            box-shadow: 0 8px 30px rgba(100, 50, 70, .06);
+        }
+
+        .success-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            display: grid;
+            place-items: center;
+            border-radius: 50%;
+            background: #fce8f0;
+            color: #b74775;
+            font-size: 32px;
+        }
+
+        .success-heading {
+            text-align: center;
+            color: #b74775;
+        }
+
+        .success-description {
+            text-align: center;
+            color: #666;
+        }
+
+        .order-code {
+            margin: 24px 0;
+            padding: 18px;
+            text-align: center;
+            background: #fff5f9;
+            border: 1px dashed #d98bad;
+            border-radius: 10px;
+        }
+
+        .order-code strong {
+            display: block;
+            margin-top: 8px;
+            font-size: 22px;
+            color: #a83264;
+            overflow-wrap: anywhere;
+        }
+
+        .order-info {
+            margin-top: 24px;
+            line-height: 1.9;
+        }
+
+        .order-info h2 {
+            font-size: 18px;
+            margin-bottom: 12px;
+        }
+
+        .order-total {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .success-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .success-actions a,
+        .success-actions button {
+            display: inline-block;
+            padding: 12px 20px;
+            border: 1px solid #b74775;
+            border-radius: 8px;
+            background: #b74775;
+            color: white;
+            text-decoration: none;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        .success-actions .secondary {
+            background: white;
+            color: #b74775;
+        }
+
+        .order-error {
+            padding: 24px;
+            text-align: center;
+            background: #fff5f5;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .success-page {
+                margin: 20px auto;
+                padding: 14px;
+            }
+
+            .success-card {
+                padding: 20px;
+            }
+
+            .success-actions > * {
+                width: 100%;
+                text-align: center;
+                box-sizing: border-box;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="success-page">
+        <section class="success-card" id="success-content">
+            <div class="success-icon">✓</div>
+
+            <h1 class="success-heading">Đặt hàng thành công!</h1>
+
+            <p class="success-description">
+                Cảm ơn bạn đã mua sắm tại CHERI.
+                Đơn hàng của bạn đã được ghi nhận.
+            </p>
+
+            <div class="order-code">
+                Mã đơn hàng của bạn
+                <strong id="order-code">Đang tải...</strong>
+            </div>
+
+            <div class="order-info">
+                <h2>Thông tin nhận hàng</h2>
+                <p>Người nhận: <strong id="receiver-name">—</strong></p>
+                <p>Số điện thoại: <strong id="receiver-phone">—</strong></p>
+                <p>Địa chỉ: <span id="receiver-address">—</span></p>
+                <p>Thanh toán: <span id="payment-method">—</span></p>
+                <p>Trạng thái: <span id="order-status">—</span></p>
+            </div>
+
+            <div class="order-info">
+                <h2>Sản phẩm đã đặt</h2>
+                <div id="order-items"></div>
+                <div class="order-total">
+                    Tổng thanh toán:
+                    <span id="order-total">0đ</span>
+                </div>
+            </div>
+
+            <div class="success-actions">
+                <a href="index.html">Tiếp tục mua sắm</a>
+                <button type="button" class="secondary" id="copy-order-code">
+                    Sao chép mã đơn hàng
+                </button>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        "use strict";
+
+        const formatMoney = value =>
+            new Intl.NumberFormat("vi-VN").format(Number(value) || 0) + "đ";
+
+        const escapeHTML = value =>
+            String(value ?? "").replace(/[&<>"']/g, char => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            })[char]);
+
+        const order = JSON.parse(
+            localStorage.getItem("cheri_order_confirmation") || "null"
+        );
+
+        if (!order || !order.orderCode) {
+            document.getElementById("success-content").innerHTML = `
+                <div class="order-error">
+                    <h1>Không tìm thấy thông tin xác nhận</h1>
+                    <p>Vui lòng kiểm tra đơn hàng hoặc quay lại cửa hàng.</p>
+                    <a href="index.html">Về trang chủ</a>
+                </div>
+            `;
+        } else {
+            document.getElementById("order-code").textContent =
+                order.orderCode;
+
+            document.getElementById("receiver-name").textContent =
+                order.recipientName || "—";
+
+            document.getElementById("receiver-phone").textContent =
+                order.phone || "—";
+
+            document.getElementById("receiver-address").textContent = [
+                order.address,
+                order.ward,
+                order.province
+            ].filter(Boolean).join(", ") || "—";
+
+            const paymentNames = {
+                cod: "Thanh toán khi nhận hàng",
+                bank_transfer: "Chuyển khoản ngân hàng",
+                online: "Thanh toán trực tuyến"
+            };
+
+            document.getElementById("payment-method").textContent =
+                paymentNames[order.paymentMethod] || order.paymentMethod || "—";
+
+            const statusNames = {
+                pending: "Chờ xác nhận",
+                confirmed: "Đã xác nhận",
+                processing: "Đang xử lý",
+                shipping: "Đang giao hàng",
+                completed: "Hoàn thành",
+                cancelled: "Đã hủy"
+            };
+
+            document.getElementById("order-status").textContent =
+                statusNames[order.orderStatus] || "Chờ xác nhận";
+
+            const items = Array.isArray(order.items) ? order.items : [];
+
+            document.getElementById("order-items").innerHTML = items.length
+                ? items.map(item => `
+                    <div style="padding:12px 0;border-bottom:1px solid #eee">
+                        <strong>${escapeHTML(item.name || "Sản phẩm")}</strong>
+                        <div>
+                            Phân loại:
+                            ${escapeHTML(item.size || "—")} /
+                            ${escapeHTML(item.colorName || item.color || "—")}
+                        </div>
+                        <div>
+                            Số lượng: ${Number(item.quantity ?? item.qty) || 1}
+                        </div>
+                        <div>
+                            ${formatMoney(
+                                (Number(item.price) || 0) *
+                                (Number(item.quantity ?? item.qty) || 1)
+                            )}
+                        </div>
+                    </div>
+                `).join("")
+                : "<p>Không có thông tin sản phẩm để hiển thị.</p>";
+
+            document.getElementById("order-total").textContent =
+                formatMoney(order.total);
+
+            document.getElementById("copy-order-code")
+                .addEventListener("click", async () => {
+                    try {
+                        await navigator.clipboard.writeText(order.orderCode);
+                        alert("Đã sao chép mã đơn hàng: " + order.orderCode);
+                    } catch (error) {
+                        prompt("Hãy sao chép mã đơn hàng:", order.orderCode);
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

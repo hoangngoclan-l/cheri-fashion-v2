@@ -1,0 +1,688 @@
+
+/* ======================================
+   CHERI FASHION - SHOP PAGE
+====================================== */
+
+.shop-page {
+    color: #292326;
+    background: #fff;
+    font-family: "Be Vietnam Pro", "DM Sans", sans-serif;
+}
+
+.shop-page *,
+.shop-page *::before,
+.shop-page *::after {
+    box-sizing: border-box;
+}
+
+.shop-main {
+    width: min(1440px, calc(100% - 64px));
+    margin: 0 auto;
+    padding: 22px 0 64px;
+}
+
+.shop-breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+    margin-bottom: 28px;
+    color: #81767b;
+    font-size: 12px;
+}
+
+.shop-breadcrumb a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.shop-breadcrumb a:hover {
+    color: #ad607c;
+}
+
+.shop-title-row {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.shop-eyebrow {
+    margin: 0 0 8px;
+    color: #ad607c;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+}
+
+.shop-title-row h1 {
+    margin: 0;
+    font-size: clamp(27px, 3vw, 38px);
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.6px;
+}
+
+.shop-subtitle {
+    margin: 9px 0 0;
+    color: #796e73;
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+/* Thanh tìm kiếm và bộ lọc */
+.shop-toolbar {
+    display: grid;
+    grid-template-columns: minmax(220px, 1.7fr) repeat(3, minmax(130px, 1fr));
+    gap: 12px;
+    align-items: end;
+    padding: 16px;
+    background: #fbf8f9;
+    border: 1px solid #eee6e9;
+    border-radius: 8px;
+}
+
+.shop-search {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    height: 42px;
+    padding-left: 12px;
+    background: #fff;
+    border: 1px solid #e5dce0;
+    border-radius: 5px;
+}
+
+.shop-search svg {
+    flex: 0 0 19px;
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+}
+
+.shop-search input {
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    padding: 0 9px;
+    color: #292326;
+    background: transparent;
+    border: 0;
+    outline: none;
+    font: inherit;
+    font-size: 12px;
+}
+
+.shop-search button {
+    align-self: stretch;
+    padding: 0 14px;
+    color: #fff;
+    background: #292326;
+    border: 0;
+    border-radius: 0 4px 4px 0;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.shop-filter {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.shop-filter label {
+    color: #63585d;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.shop-filter select {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+    padding: 0 9px;
+    color: #292326;
+    background: #fff;
+    border: 1px solid #e5dce0;
+    border-radius: 5px;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.shop-result-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 22px 0 14px;
+}
+
+.shop-result-row p {
+    margin: 0;
+    color: #71666b;
+    font-size: 12px;
+}
+
+.shop-clear-button {
+    padding: 5px 0;
+    color: #8d5268;
+    background: transparent;
+    border: 0;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* Lưới sản phẩm gọn */
+.shop-product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px 16px;
+}
+
+.shop-card {
+    min-width: 0;
+}
+
+.shop-card-image {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 3 / 4;
+    background: #f5f0f2;
+}
+
+.shop-card-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.shop-card:hover .shop-card-image img {
+    transform: scale(1.035);
+}
+
+.shop-image-fallback {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    padding: 10px;
+    color: #9a858d;
+    text-align: center;
+    font-size: 12px;
+}
+
+.shop-card-tag {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    padding: 5px 7px;
+    color: #fff;
+    background: #a95170;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+}
+
+.shop-wishlist-button {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    color: #292326;
+    background: rgba(255, 255, 255, 0.94);
+    border: 0;
+    border-radius: 50%;
+    font-size: 19px;
+    cursor: pointer;
+}
+
+.shop-wishlist-button.is-active {
+    color: #c04468;
+}
+
+.shop-card-info {
+    padding-top: 10px;
+}
+
+.shop-card-category {
+    margin: 0 0 5px;
+    color: #8b7c83;
+    font-size: 10px;
+}
+
+.shop-card-name {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+
+    overflow: hidden;
+    min-height: 39px;
+    margin: 0 0 7px;
+
+    color: #292326;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+.shop-card-name:hover {
+    color: #ad607c;
+}
+
+.shop-card-price {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 7px;
+    min-height: 23px;
+}
+
+.shop-card-price strong {
+    color: #292326;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.shop-card-price del {
+    color: #9a8f94;
+    font-size: 11px;
+}
+
+.shop-card-stock {
+    margin: 6px 0 0;
+    color: #8b7c83;
+    font-size: 10px;
+}
+
+/* Nút mua hàng ngay tại thẻ */
+.shop-card-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.shop-card-actions button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 36px;
+    padding: 5px 4px;
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.3;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.shop-add-cart {
+    color: #292326;
+    background: #fff;
+    border: 1px solid #d9cbd1;
+}
+
+.shop-buy-now {
+    color: #fff;
+    background: #292326;
+    border: 1px solid #292326;
+}
+
+.shop-add-cart:hover {
+    color: #9e4e6d;
+    border-color: #ad607c;
+}
+
+.shop-buy-now:hover {
+    background: #a95170;
+    border-color: #a95170;
+}
+
+.shop-card-actions button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.shop-loading {
+    grid-column: 1 / -1;
+    padding: 60px 12px;
+    color: #81767b;
+    text-align: center;
+    font-size: 13px;
+}
+
+.shop-empty {
+    padding: 55px 16px;
+    text-align: center;
+}
+
+.shop-empty[hidden] {
+    display: none !important;
+}
+
+.shop-empty > span {
+    color: #ad607c;
+    font-size: 35px;
+}
+
+.shop-empty h2 {
+    margin: 12px 0 8px;
+    font-size: 21px;
+}
+
+.shop-empty p {
+    color: #81767b;
+    font-size: 13px;
+}
+
+.shop-empty button {
+    margin-top: 12px;
+    padding: 11px 18px;
+    color: #fff;
+    background: #292326;
+    border: 0;
+    cursor: pointer;
+}
+
+.shop-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 34px;
+}
+
+.shop-page-button {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 9px;
+    color: #292326;
+    background: #fff;
+    border: 1px solid #e4d9de;
+    cursor: pointer;
+}
+
+.shop-page-button.is-current {
+    color: #fff;
+    background: #292326;
+    border-color: #292326;
+}
+
+.shop-page-button:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+/* Thông báo */
+.shop-toast {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 3000;
+    max-width: calc(100vw - 32px);
+    padding: 12px 18px;
+    color: #fff;
+    background: #292326;
+    border-radius: 6px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.shop-toast.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Hộp chọn size, màu và số lượng */
+.shop-modal[hidden] {
+    display: none !important;
+}
+
+.shop-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2500;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+}
+
+.shop-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(28, 20, 24, 0.48);
+}
+
+.shop-modal-card {
+    position: relative;
+    z-index: 1;
+    width: min(420px, 100%);
+    max-height: min(100vh, 680px);
+    overflow-y: auto;
+    padding: 27px;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 16px 50px rgba(0, 0, 0, 0.18);
+}
+
+.shop-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    color: #292326;
+    background: transparent;
+    border: 0;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.shop-modal-card h2 {
+    margin: 0 0 18px;
+    font-size: 23px;
+}
+
+.shop-modal-product {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: 1px solid #eee6e9;
+}
+
+.shop-modal-product img {
+    width: 86px;
+    height: 90px;
+    object-fit: cover;
+    background: #f5f0f2;
+}
+
+.shop-modal-product p {
+    margin: 0 0 9px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.shop-modal-product strong {
+    font-size: 15px;
+}
+
+#shop-variant-form {
+    display: grid;
+    gap: 8px;
+}
+
+#shop-variant-form label {
+    margin-top: 5px;
+    color: #5d5257;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+#shop-variant-form select,
+.shop-quantity-control input {
+    width: 100%;
+    min-width: 0;
+    height: 40px;
+    padding: 0 10px;
+    color: #292326;
+    background: #fff;
+    border: 1px solid #e0d5da;
+    border-radius: 4px;
+    font: inherit;
+    font-size: 13px;
+}
+
+.shop-quantity-control {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 80px) 40px;
+    gap: 5px;
+}
+
+.shop-quantity-control button {
+    color: #292326;
+    background: #fff;
+    border: 1px solid #e0d5da;
+    cursor: pointer;
+}
+
+.shop-quantity-control input {
+    text-align: center;
+}
+
+.shop-variant-error {
+    margin: 5px 0;
+    color: #b42342;
+    font-size: 12px;
+}
+
+.shop-confirm-button {
+    min-height: 44px;
+    margin-top: 10px;
+    color: #fff;
+    background: #292326;
+    border: 0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.shop-confirm-button:hover {
+    background: #a95170;
+}
+
+/* Responsive */
+@media (min-width: 1400px) {
+    .shop-product-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 1000px) {
+    .shop-main {
+        width: calc(100% - 36px);
+    }
+
+    .shop-toolbar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .shop-search {
+        grid-column: 1 / -1;
+    }
+
+    .shop-product-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px 13px;
+    }
+}
+
+@media (max-width: 600px) {
+    .shop-main {
+        width: calc(100% - 24px);
+        padding-top: 16px;
+    }
+
+    .shop-breadcrumb {
+        margin-bottom: 20px;
+    }
+
+    .shop-title-row {
+        margin-bottom: 18px;
+    }
+
+    .shop-toolbar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        padding: 11px;
+    }
+
+    .shop-search {
+        grid-column: 1 / -1;
+    }
+
+    .shop-filter select {
+        font-size: 11px;
+    }
+
+    .shop-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 22px 10px;
+    }
+
+    .shop-card-info {
+        padding-top: 8px;
+    }
+
+    .shop-card-name {
+        min-height: 38px;
+        font-size: 12px;
+    }
+
+    .shop-card-price strong {
+        font-size: 13px;
+    }
+
+    .shop-card-actions {
+        grid-template-columns: 1fr;
+        gap: 5px;
+        margin-top: 8px;
+    }
+
+    .shop-card-actions button {
+        min-height: 34px;
+        font-size: 10px;
+    }
+
+    .shop-modal-card {
+        padding: 20px 16px;
+    }
+
+    .shop-toast {
+        right: 12px;
+        bottom: 12px;
+    }
+}

@@ -1,0 +1,191 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Sản phẩm | CHERI FASHION</title>
+    <meta name="description" content="Khám phá các thiết kế thời trang nữ tại CHERI Fashion.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/pages.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/shop.css">
+
+    <script src="../assets/js/api.js" defer></script>
+    <script src="../assets/js/app.js" defer></script>
+    <script src="../assets/js/shop.js" defer></script>
+</head>
+
+<body class="shop-page">
+    <div data-include="header"></div>
+
+    <main class="shop-main">
+        <div class="shop-breadcrumb">
+            <a href="index.html">Trang chủ</a>
+            <span>/</span>
+            <span>Sản phẩm</span>
+        </div>
+
+        <section class="shop-title-row">
+            <div>
+                <p class="shop-eyebrow">CHERI FASHION COLLECTION</p>
+                <p class="shop-subtitle">
+                    Tìm thiết kế phù hợp với phong cách của bạn.
+                </p>
+            </div>
+        </section>
+
+        <!-- Thanh tìm kiếm và bộ lọc -->
+        <section class="shop-toolbar" aria-label="Tìm kiếm và lọc sản phẩm">
+            <form id="shop-search-form" class="shop-search">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="10.8" cy="10.8" r="6.8"></circle>
+                    <path d="m16 16 4.2 4.2"></path>
+                </svg>
+
+                <input
+                    id="shop-search-input"
+                    type="search"
+                    placeholder="Tìm tên sản phẩm..."
+                    aria-label="Tìm tên sản phẩm"
+                >
+
+                <button type="submit">Tìm</button>
+            </form>
+
+            <div class="shop-filter">
+                <label for="shop-category">Danh mục</label>
+                <select id="shop-category">
+                    <option value="">Tất cả</option>
+                    <option value="Áo nữ">Áo nữ</option>
+                    <option value="Áo khoác">Áo khoác</option>
+                    <option value="Quần">Quần</option>
+                    <option value="Váy & Đầm">Váy & Đầm</option>
+                    <option value="Set đồ nữ">Set đồ nữ</option>
+                </select>
+            </div>
+
+            <div class="shop-filter">
+                <label for="shop-price">Khoảng giá</label>
+                <select id="shop-price">
+                    <option value="">Tất cả mức giá</option>
+                    <option value="0-200000">Dưới 200.000đ</option>
+                    <option value="200000-500000">200.000–500.000đ</option>
+                    <option value="500000-1000000">500.000–1.000.000đ</option>
+                    <option value="1000000-999999999">Trên 1.000.000đ</option>
+                </select>
+            </div>
+
+            <div class="shop-filter shop-sort">
+                <label for="shop-sort">Sắp xếp</label>
+                <select id="shop-sort">
+                    <option value="featured">Nổi bật</option>
+                    <option value="newest">Mới nhất</option>
+                    <option value="price-asc">Giá tăng dần</option>
+                    <option value="price-desc">Giá giảm dần</option>
+                    <option value="name-asc">Tên A–Z</option>
+                </select>
+            </div>
+        </section>
+
+        <div class="shop-result-row">
+            <p id="shop-result-count" aria-live="polite">Đang tải sản phẩm...</p>
+            <button type="button" id="shop-clear-filters" class="shop-clear-button">
+                Xóa bộ lọc
+            </button>
+        </div>
+
+        <!-- Danh sách sản phẩm -->
+        <section
+            id="shop-product-grid"
+            class="shop-product-grid"
+            aria-label="Danh sách sản phẩm"
+        >
+            <div class="shop-loading">Đang tải sản phẩm...</div>
+        </section>
+
+        <div id="shop-empty" class="shop-empty" hidden>
+            <span aria-hidden="true">⌕</span>
+            <h2>Chưa tìm thấy sản phẩm phù hợp</h2>
+            <p>Thử đổi từ khóa hoặc điều chỉnh bộ lọc nhé.</p>
+            <button type="button" id="shop-empty-reset">Xem tất cả sản phẩm</button>
+        </div>
+
+        <nav class="shop-pagination" id="shop-pagination" aria-label="Phân trang"></nav>
+    </main>
+
+    <!-- Hộp thông báo thao tác giỏ hàng -->
+    <div id="shop-toast" class="shop-toast" role="status" aria-live="polite"></div>
+
+    <!-- Hộp chọn biến thể khi mua nhanh -->
+    <div id="shop-variant-modal" class="shop-modal" hidden>
+        <div class="shop-modal-backdrop" data-close-variant></div>
+
+        <section
+            class="shop-modal-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="shop-modal-title"
+        >
+            <button
+                type="button"
+                class="shop-modal-close"
+                aria-label="Đóng"
+                data-close-variant
+            >×</button>
+
+            <p class="shop-eyebrow">CHERI FASHION</p>
+            <h2 id="shop-modal-title">Chọn phân loại</h2>
+
+            <div class="shop-modal-product">
+                <img id="shop-modal-image" src="" alt="">
+                <div>
+                    <p id="shop-modal-name"></p>
+                    <strong id="shop-modal-price"></strong>
+                </div>
+            </div>
+
+            <form id="shop-variant-form">
+                <label for="shop-modal-size">Kích thước</label>
+                <select id="shop-modal-size" required>
+                    <option value="">Chọn kích thước</option>
+                    <option value="S">S</option>
+                    <option value="M">M</option>
+                    <option value="L">L</option>
+                    <option value="XL">XL</option>
+                    <option value="Free size">Free size</option>
+                </select>
+
+                <label for="shop-modal-color">Màu sắc</label>
+                <select id="shop-modal-color" required>
+                    <option value="">Chọn màu sắc</option>
+                </select>
+
+                <label for="shop-modal-quantity">Số lượng</label>
+                <div class="shop-quantity-control">
+                    <button type="button" id="shop-quantity-minus" aria-label="Giảm số lượng">−</button>
+                    <input id="shop-modal-quantity" type="number" value="1" min="1" max="99" required>
+                    <button type="button" id="shop-quantity-plus" aria-label="Tăng số lượng">+</button>
+                </div>
+
+                <p id="shop-variant-error" class="shop-variant-error" hidden></p>
+
+                <button type="submit" id="shop-variant-confirm" class="shop-confirm-button">
+                    THÊM VÀO GIỎ
+                </button>
+            </form>
+        </section>
+    </div>
+
+    <div data-include="footer"></div>
+    
+    <script src="../assets/js/auth.js"></script>
+</body>
+</html>

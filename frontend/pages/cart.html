@@ -1,0 +1,128 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Giỏ hàng | CHERI FASHION</title>
+    <meta name="description" content="Kiểm tra sản phẩm và đơn hàng của bạn tại Cheri Fashion.">
+
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/cart.css">
+
+    <script src="../assets/js/app.js" defer></script>
+    <script src="../assets/js/cart.js" defer></script>
+</head>
+<body>
+    <div data-include="header"></div>
+
+    <main class="cart-page">
+        <div class="cart-container">
+
+            <nav class="cart-breadcrumb" aria-label="Breadcrumb">
+                <a href="index.html">Trang chủ</a>
+                <span>/</span>
+                <span>Giỏ hàng</span>
+            </nav>
+
+            <header class="cart-heading">
+                <span class="cart-eyebrow">YOUR SELECTION</span>
+                <h1>Giỏ hàng của bạn</h1>
+                <p>Kiểm tra những món đồ bạn đã chọn trước khi thanh toán.</p>
+            </header>
+
+            <div class="cart-layout">
+
+                <section class="cart-main-section">
+                    <div class="cart-list-heading">
+                        <h2>Sản phẩm đã chọn</h2>
+                        <span id="cart-item-count">0 sản phẩm</span>
+                    </div>
+
+                    
+                    <div class="cart-selection-bar">
+                        <label class="cart-select-all">
+                            <input type="checkbox" id="select-all-cart">
+                            <span>Chọn tất cả sản phẩm</span>
+                        </label>
+
+                        <span id="selected-count">Đã chọn 0 sản phẩm</span>
+                    </div>
+
+                    <div id="cart-items">
+                        <p class="cart-loading">Đang tải giỏ hàng...</p>
+                    </div>
+                    
+                    <div class="cart-bottom-actions">
+                        <a href="shop.html" class="cart-continue-link">
+                            ← Tiếp tục mua sắm
+                        </a>
+
+                        <button
+                            type="button"
+                            id="cart-clear-button"
+                            class="cart-clear-button"
+                        >
+                            Xóa toàn bộ giỏ hàng
+                        </button>
+                    </div>
+                </section>
+
+                <aside class="cart-summary">
+                    <h2>Đơn hàng của bạn</h2>
+
+                    <div class="cart-summary-row">
+                        <span>Tạm tính</span>
+                        <span id="cart-subtotal">0đ</span>
+                    </div>
+
+                    <div class="cart-summary-row">
+                        <span>Phí vận chuyển</span>
+                        <span id="cart-shipping">Tính ở bước sau</span>
+                    </div>
+
+                    <div class="cart-summary-divider"></div>
+
+                    <div class="cart-summary-total">
+                        <span>Tổng tạm tính</span>
+                        <strong id="cart-total">0đ</strong>
+                    </div>
+
+                    <p class="cart-summary-note">
+                        Phí vận chuyển và ưu đãi sẽ được xác nhận ở bước thanh toán.
+                    </p>
+
+                    <button
+                        type="button"
+                        id="cart-checkout-button"
+                        class="cart-checkout-button"
+                    >
+                        TIẾN HÀNH THANH TOÁN
+                        <span aria-hidden="true">→</span>
+                    </button>
+
+                    <div class="cart-secure-note">
+                        <span aria-hidden="true">♡</span>
+                        <span>Trải nghiệm mua sắm đơn giản và thuận tiện.</span>
+                    </div>
+                </aside>
+
+            </div>
+        </div>
+    </main>
+
+    <div data-include="footer"></div>
+
+    <div
+        id="cart-toast"
+        class="cart-toast"
+        role="status"
+        aria-live="polite"
+    ></div>
+
+    <script src="../assets/js/auth.js"></script>
+</body>
+</html>

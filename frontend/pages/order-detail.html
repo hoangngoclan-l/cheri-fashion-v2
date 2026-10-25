@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chi tiết đơn hàng | CHERI.</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script src="../assets/js/order-detail.js" defer></script>
+    <style>
+        .detail-page {
+            max-width: 900px;
+            margin: 36px auto;
+            padding: 20px;
+        }
+
+        .detail-back {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #a83264;
+            text-decoration: none;
+        }
+
+        .detail-heading h1 {
+            margin-bottom: 8px;
+            font-size: clamp(25px, 4vw, 34px);
+        }
+
+        .detail-muted { color: #777; }
+
+        .detail-panel {
+            margin: 20px 0;
+            padding: 22px;
+            border: 1px solid #eee1e7;
+            border-radius: 13px;
+            background: #fff;
+        }
+
+        .detail-panel h2 {
+            margin: 0 0 18px;
+            font-size: 19px;
+        }
+
+        .detail-summary {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .detail-code {
+            color: #a83264;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .detail-status {
+            display: inline-block;
+            padding: 7px 12px;
+            border-radius: 20px;
+            background: #fff1d7;
+            color: #895d00;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 15px 0;
+            border-bottom: 1px solid #f1e8ed;
+        }
+
+        .detail-item:last-child { border-bottom: 0; }
+
+        .detail-item-name { font-weight: 650; }
+        .detail-item-meta {
+            margin-top: 7px;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .detail-item-price {
+            text-align: right;
+            white-space: nowrap;
+            font-weight: 650;
+        }
+
+        .detail-total-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 13px;
+        }
+
+        .detail-grand-total {
+            padding-top: 14px;
+            border-top: 1px solid #eee1e7;
+            font-size: 19px;
+            font-weight: 750;
+        }
+
+        .detail-grand-total strong { color: #b74775; }
+
+        .detail-message {
+            padding: 14px;
+            border-radius: 8px;
+            background: #fff5f9;
+            color: #8e3157;
+        }
+
+        .detail-message[data-type="error"] {
+            background: #fff0f0;
+            color: #a12626;
+        }
+
+        .detail-button {
+            display: inline-block;
+            padding: 12px 17px;
+            border: 0;
+            border-radius: 8px;
+            background: #b74775;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        @media (max-width: 560px) {
+            .detail-page { margin: 18px auto; padding: 14px; }
+            .detail-panel { padding: 16px; }
+            .detail-item { flex-direction: column; gap: 8px; }
+            .detail-item-price { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <main class="detail-page">
+        <a class="detail-back" href="my-orders.html">← Quay lại đơn hàng</a>
+
+        <header class="detail-heading">
+            <h1>Chi tiết đơn hàng</h1>
+            <p class="detail-muted">Thông tin đơn hàng và giao nhận của bạn.</p>
+        </header>
+
+        <div id="detail-message" class="detail-message"
+             role="status" aria-live="polite">Đang tải đơn hàng...</div>
+
+        <div id="detail-content" hidden>
+            <section class="detail-panel">
+                <div class="detail-summary">
+                    <div>
+                        <div class="detail-muted">Mã đơn hàng</div>
+                        <div id="detail-code" class="detail-code"></div>
+                        <p id="detail-date" class="detail-muted"></p>
+                    </div>
+                    <div>
+                        <div class="detail-muted">Trạng thái</div>
+                        <span id="detail-status" class="detail-status"></span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="detail-panel">
+                <h2>Sản phẩm đã đặt</h2>
+                <div id="detail-items"></div>
+            </section>
+
+            <section class="detail-panel">
+                <h2>Thông tin giao hàng</h2>
+                <p><strong>Người nhận:</strong> <span id="detail-recipient"></span></p>
+                <p><strong>Số điện thoại:</strong> <span id="detail-phone"></span></p>
+                <p><strong>Email:</strong> <span id="detail-email"></span></p>
+                <p><strong>Địa chỉ:</strong> <span id="detail-address"></span></p>
+                <p><strong>Ghi chú:</strong> <span id="detail-note"></span></p>
+            </section>
+
+            <section class="detail-panel">
+                <h2>Thanh toán</h2>
+                <div class="detail-total-row">
+                    <span>Tạm tính</span>
+                    <span id="detail-subtotal"></span>
+                </div>
+                <div class="detail-total-row">
+                    <span>Phí vận chuyển</span>
+                    <span id="detail-shipping"></span>
+                </div>
+                <div class="detail-total-row">
+                    <span>Giảm giá</span>
+                    <span id="detail-discount"></span>
+                </div>
+                <div class="detail-total-row">
+                    <span>Phương thức</span>
+                    <span id="detail-payment-method"></span>
+                </div>
+                <div class="detail-total-row">
+                    <span>Trạng thái thanh toán</span>
+                    <span id="detail-payment-status"></span>
+                </div>
+                <div class="detail-total-row detail-grand-total">
+                    <span>Tổng cộng</span>
+                    <strong id="detail-total"></strong>
+                </div>
+            </section>
+
+            <a class="detail-button" href="my-orders.html">
+                Quản lý đơn hàng
+            </a>
+        </div>
+    </main>
+</body>
+</html>

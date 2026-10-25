@@ -1,0 +1,38 @@
+
+### 1. Kiểm tra danh sách sản phẩm từ backend
+GET http://localhost:3000/api/products
+
+### 2. Kiểm tra API đặt hàng - gửi thiếu dữ liệu
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "recipientName": "",
+  "phone": "",
+  "shippingAddress": "",
+  "items": []
+}
+
+
+### 3. Tạo đơn hàng thử
+POST http://localhost:3000/api/orders
+Content-Type: application/json
+
+{
+  "recipientName": "Khach hang thu nghiem",
+  "phone": "0901234567",
+  "email": "test@example.com",
+  "shippingAddress": "So 10, Duong Mau",
+  "province": "Ha Noi",
+  "ward": "Phuong Mau",
+  "note": "Don hang kiem thu",
+  "paymentMethod": "cod",
+  "items": [
+    {
+      "productId": 1,
+      "size": "M",
+      "colorName": "Trắng",
+      "quantity": 1
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Thanh toán | CHERI FASHION</title>
+    <meta name="description" content="Hoàn tất đơn hàng tại Cheri Fashion.">
+
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/checkout.css">
+
+    <script src="../assets/js/app.js" defer></script>
+    <script src="../assets/js/checkout.js" defer></script>
+</head>
+
+<body>
+    <div data-include="header"></div>
+
+    
+        <main class="checkout-page">
+            <div class="checkout-container">
+                <nav class="checkout-breadcrumb" aria-label="Breadcrumb">
+                    <a href="index.html">Trang chủ</a>
+                    <span>/</span>
+                    <a href="cart.html">Giỏ hàng</a>
+                    <span>/</span>
+                    <span>Thanh toán</span>
+                </nav>
+
+                <h1 class="checkout-title">Thanh toán</h1>
+
+                <div id="checkout-message" aria-live="polite"></div>
+
+                <form id="checkout-form">
+                    <div class="checkout-layout">
+                        <div class="checkout-main">
+
+                            <section class="checkout-card">
+                                <h2>Thông tin nhận hàng</h2>
+
+                                <div class="checkout-form-grid">
+                                    <div class="checkout-field checkout-field-full">
+                                        <label for="receiver-name">Họ và tên <b>*</b></label>
+                                        <input id="receiver-name" name="receiverName"
+                                            type="text" autocomplete="name" required>
+                                    </div>
+
+                                    <div class="checkout-field">
+                                        <label for="receiver-phone">Số điện thoại <b>*</b></label>
+                                        <input id="receiver-phone" name="receiverPhone"
+                                            type="tel" autocomplete="tel" required>
+                                    </div>
+
+                                    <div class="checkout-field">
+                                        <label for="receiver-email">Email</label>
+                                        <input id="receiver-email" name="receiverEmail"
+                                            type="email" autocomplete="email">
+                                    </div>
+
+                                    <div class="checkout-field">
+                                        <label for="receiver-province">Tỉnh / Thành phố <b>*</b></label>
+                                        <input id="receiver-province" name="province"
+                                            list="province-options" autocomplete="address-level1"
+                                            placeholder="Chọn tỉnh / thành phố" required>
+                                        <datalist id="province-options"></datalist>
+                                    </div>
+
+                                    <div class="checkout-field">
+                                        <label for="receiver-ward">Phường / Xã <b>*</b></label>
+                                        <input id="receiver-ward" name="ward"
+                                            list="ward-options" autocomplete="address-level2"
+                                            placeholder="Chọn phường / xã" required>
+                                        <datalist id="ward-options"></datalist>
+                                    </div>
+
+                                    <div class="checkout-field checkout-field-full">
+                                        <label for="receiver-address">Địa chỉ cụ thể <b>*</b></label>
+                                        <input id="receiver-address" name="address"
+                                            type="text" autocomplete="street-address"
+                                            placeholder="Số nhà, tên đường, tòa nhà..." required>
+                                    </div>
+
+                                    <div class="checkout-field checkout-field-full">
+                                        <label for="receiver-note">Ghi chú</label>
+                                        <textarea id="receiver-note" name="note"
+                                            placeholder="Ghi chú cho đơn hàng (nếu có)"></textarea>
+                                    </div>
+                                </div>
+
+                                <label class="checkout-default-address">
+                                    <input type="checkbox" id="save-default-address">
+                                    <span class="checkout-switch" aria-hidden="true"></span>
+                                    <span>Đặt làm địa chỉ mặc định</span>
+                                </label>
+                            </section>
+
+                            <section class="checkout-card">
+                                <h2>Phương thức thanh toán</h2>
+
+                                <div class="checkout-payment-list">
+                                    <label class="checkout-payment-option">
+                                        <input type="radio" name="paymentMethod"
+                                            value="cod" checked>
+                                        <span class="checkout-payment-icon">COD</span>
+                                        <span class="checkout-payment-text">
+                                            <strong>Thanh toán khi nhận hàng</strong>
+                                            <small>Trả tiền trực tiếp khi nhận đơn</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="checkout-payment-option">
+                                        <input type="radio" name="paymentMethod"
+                                            value="bank">
+                                        <span class="checkout-payment-icon">BANK</span>
+                                        <span class="checkout-payment-text">
+                                            <strong>Chuyển khoản ngân hàng</strong>
+                                            <small>Thanh toán bằng tài khoản ngân hàng</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="checkout-payment-option">
+                                        <input type="radio" name="paymentMethod"
+                                            value="ewallet">
+                                        <span class="checkout-payment-icon">WALLET</span>
+                                        <span class="checkout-payment-text">
+                                            <strong>Ví điện tử</strong>
+                                            <small>Ví dụ: MoMo, ZaloPay khi được tích hợp</small>
+                                        </span>
+                                    </label>
+
+                                    <label class="checkout-payment-option">
+                                        <input type="radio" name="paymentMethod"
+                                            value="card">
+                                        <span class="checkout-payment-icon">CARD</span>
+                                        <span class="checkout-payment-text">
+                                            <strong>Thẻ ATM / Visa / Mastercard</strong>
+                                            <small>Thanh toán thẻ qua cổng hỗ trợ</small>
+                                        </span>
+                                    </label>
+                                </div>
+
+                                <div id="payment-detail" class="payment-detail" hidden></div>
+                            </section>
+                        </div>
+
+                        <aside class="checkout-summary">
+                            <h2>Đơn hàng của bạn <span id="checkout-product-count">0</span></h2>
+
+                            <div id="checkout-products"></div>
+
+                            <div class="checkout-summary-row">
+                                <span>Tạm tính</span>
+                                <strong id="checkout-subtotal">0đ</strong>
+                            </div>
+
+                            <div class="checkout-summary-row">
+                                <span>Phí vận chuyển</span>
+                                <strong id="checkout-shipping">30.000đ</strong>
+                            </div>
+
+                            <div class="checkout-summary-divider"></div>
+
+                            <div class="checkout-summary-total">
+                                <span>Tổng thanh toán</span>
+                                <strong id="checkout-total">0đ</strong>
+                            </div>
+
+                            <button type="submit" id="checkout-submit" class="checkout-submit">
+                                ĐẶT HÀNG
+                            </button>
+
+                            <a class="checkout-back-link" href="cart.html">
+                                ← Quay lại giỏ hàng
+                            </a>
+                        </aside>
+                    </div>
+                </form>
+            </div>
+        </main>
+        
+    <div data-include="footer"></div>
+</body>
+</html>

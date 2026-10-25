@@ -1,0 +1,73 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Chi tiết sản phẩm | CHERI FASHION</title>
+    <meta name="description"
+          content="Khám phá chi tiết sản phẩm thời trang nữ tại Cheri Fashion.">
+
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/product.css">
+
+    <script src="../assets/js/app.js" defer></script>
+    <script src="../assets/js/product.js" defer></script>
+</head>
+
+<body>
+    <div data-include="header"></div>
+
+    <main class="product-page">
+        <nav class="product-breadcrumb" aria-label="Breadcrumb">
+            <a href="index.html">Trang chủ</a>
+            <span>/</span>
+            <a href="shop.html">Sản phẩm</a>
+            <span>/</span>
+            <span id="product-breadcrumb-name">Chi tiết sản phẩm</span>
+        </nav>
+
+        <!-- Nội dung sản phẩm được product.js tải vào -->
+        <section id="product-detail-content">
+            <div class="product-loading">Đang tải thông tin sản phẩm...</div>
+        </section>
+
+        <section class="product-description-section">
+            <span class="product-eyebrow">DETAILS &amp; CARE</span>
+            <h2>Thông tin sản phẩm</h2>
+            <div id="product-description" class="product-description">
+                Thông tin chi tiết sẽ được cập nhật.
+            </div>
+        </section>
+
+        <section class="product-related-section">
+            <div class="product-section-heading">
+                <div>
+                    <span class="product-eyebrow">YOU MAY ALSO LIKE</span>
+                    <h2>Có thể bạn sẽ thích</h2>
+                </div>
+                <a href="shop.html" class="product-view-all">
+                    Xem tất cả →
+                </a>
+            </div>
+
+            <div id="product-related-grid" class="product-related-grid">
+                <p class="product-loading">Đang tải sản phẩm...</p>
+            </div>
+        </section>
+    </main>
+
+    <div data-include="footer"></div>
+
+    <!-- Thông báo thao tác -->
+    <div id="product-toast"
+         class="product-toast"
+         role="status"
+         aria-live="polite"></div>
+
+         <script src="../assets/js/auth.js"></script>
+</body>
+</html>

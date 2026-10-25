@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông tin cá nhân | CHERI Fashion</title>
+    <style>
+        .profile-page {
+            --pink: #d96b8a;
+            --pink-light: #fff0f4;
+            --text: #30272a;
+            --muted: #82767a;
+            --border: #eee2e6;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+            color: var(--text);
+            font-family: Arial, sans-serif;
+        }
+
+        .profile-page * { box-sizing: border-box; }
+
+        .profile-topbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            padding-bottom: 22px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .profile-logo {
+            color: var(--pink);
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            text-decoration: none;
+        }
+
+        .profile-nav {
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+        }
+
+        .profile-nav a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .profile-nav a:hover { color: var(--pink); }
+
+        .profile-heading { margin: 32px 0 24px; }
+        .profile-heading h1 { margin: 0 0 8px; font-size: 28px; }
+        .profile-heading p { margin: 0; color: var(--muted); line-height: 1.6; }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+            gap: 22px;
+            align-items: start;
+        }
+
+        .profile-card {
+            min-width: 0;
+            padding: 24px;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 8px 28px rgba(80, 30, 45, 0.04);
+        }
+
+        .profile-card h2 { margin: 0 0 20px; font-size: 19px; }
+        .profile-field { margin-bottom: 16px; }
+
+        .profile-field label {
+            display: block;
+            margin-bottom: 7px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .profile-field input,
+        .profile-field textarea {
+            width: 100%;
+            padding: 12px 13px;
+            border: 1px solid #e5d8dd;
+            border-radius: 9px;
+            outline: none;
+            background: #fff;
+            color: var(--text);
+            font: inherit;
+        }
+
+        .profile-field input:focus,
+        .profile-field textarea:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 3px rgba(217, 107, 138, 0.12);
+        }
+
+        .profile-field input[readonly] {
+            background: #f8f5f6;
+            color: var(--muted);
+        }
+
+        .profile-field textarea { min-height: 82px; resize: vertical; }
+
+        .profile-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 11px 16px;
+            border: 1px solid var(--pink);
+            border-radius: 9px;
+            background: var(--pink);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .profile-btn:hover { filter: brightness(0.96); }
+        .profile-btn:disabled { opacity: 0.6; cursor: wait; }
+
+        .profile-btn.secondary {
+            color: var(--pink);
+            background: #fff;
+        }
+
+        .profile-btn.danger {
+            color: #b4233e;
+            background: #fff;
+            border-color: #edc4cd;
+        }
+
+        .profile-message {
+            display: none;
+            margin: 0 0 16px;
+            padding: 11px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .profile-message.show { display: block; }
+        .profile-message.success { background: #edf9f0; color: #236b39; }
+        .profile-message.error { background: #fff0f1; color: #a1263d; }
+
+        .profile-address-form {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .profile-address-form h3 { margin: 0 0 16px; font-size: 16px; }
+
+        .profile-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            margin: 0 0 18px;
+            font-size: 13px;
+        }
+
+        .profile-checkbox input { accent-color: var(--pink); }
+
+        .profile-address-list {
+            display: grid;
+            gap: 13px;
+        }
+
+        .profile-address-item {
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow-wrap: anywhere;
+        }
+
+        .profile-address-item.is-default {
+            border-color: #e9a6b9;
+            background: #fff9fb;
+        }
+
+        .profile-address-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .profile-address-title strong { font-size: 14px; }
+        .profile-default-label {
+            flex-shrink: 0;
+            padding: 4px 7px;
+            border-radius: 20px;
+            background: var(--pink-light);
+            color: #b94d6d;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .profile-address-item p {
+            margin: 5px 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .profile-address-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 13px;
+        }
+
+        .profile-address-actions button {
+            padding: 7px 10px;
+            font-size: 12px;
+        }
+
+        .profile-empty {
+            padding: 24px 14px;
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .profile-footer {
+            margin-top: 28px;
+            color: var(--muted);
+            text-align: center;
+            font-size: 12px;
+        }
+
+        @media (max-width: 760px) {
+            .profile-grid { grid-template-columns: 1fr; }
+            .profile-page { padding: 20px 14px 40px; }
+            .profile-card { padding: 18px; }
+            .profile-heading h1 { font-size: 24px; }
+        }
+    </style>
+    <script src="../assets/js/auth.js" defer></script>
+    <script src="../assets/js/profile.js" defer></script>
+</head>
+<body>
+<div class="profile-page">
+    <header class="profile-topbar">
+        <a class="profile-logo" href="index.html">CHERI.</a>
+        <nav class="profile-nav" aria-label="Điều hướng">
+            <a href="index.html">Trang chủ</a>
+            <a href="my-orders.html">Đơn hàng của tôi</a>
+            <a href="account.html">Tài khoản</a>
+            <a href="#" id="profile-logout">Đăng xuất</a>
+        </nav>
+    </header>
+
+    <section class="profile-heading">
+        <h1>Thông tin cá nhân</h1>
+        <p>Quản lý thông tin tài khoản và địa chỉ giao hàng của bạn tại CHERI Fashion.</p>
+    </section>
+
+    <div class="profile-grid">
+        <section class="profile-card">
+            <h2>Thông tin tài khoản</h2>
+            <div id="profile-message" class="profile-message" role="status" aria-live="polite"></div>
+
+            <form id="profile-form">
+                <div class="profile-field">
+                    <label for="profile-full-name">Họ và tên *</label>
+                    <input id="profile-full-name" name="fullName" type="text"
+                           maxlength="100" autocomplete="name" required>
+                </div>
+
+                <div class="profile-field">
+                    <label for="profile-email">Email</label>
+                    <input id="profile-email" name="email" type="email"
+                           autocomplete="email" readonly>
+                </div>
+
+                <div class="profile-field">
+                    <label for="profile-phone">Số điện thoại *</label>
+                    <input id="profile-phone" name="phone" type="tel"
+                           maxlength="20" autocomplete="tel" required>
+                </div>
+
+                <button class="profile-btn" id="profile-save" type="submit">
+                    Lưu thông tin
+                </button>
+            </form>
+        </section>
+
+        <section class="profile-card">
+            <h2>Sổ địa chỉ</h2>
+            <div id="address-message" class="profile-message" role="status" aria-live="polite"></div>
+            <div id="addresses-list" class="profile-address-list">
+                <div class="profile-empty">Đang tải địa chỉ...</div>
+            </div>
+
+            <div class="profile-address-form" id="address-form-section">
+                <h3 id="address-form-title">Thêm địa chỉ mới</h3>
+
+                <form id="address-form">
+                    <input id="address-id" type="hidden">
+
+                    <div class="profile-field">
+                        <label for="address-recipient-name">Tên người nhận *</label>
+                        <input id="address-recipient-name" type="text"
+                               maxlength="100" autocomplete="name" required>
+                    </div>
+
+                    <div class="profile-field">
+                        <label for="address-phone">Số điện thoại nhận hàng *</label>
+                        <input id="address-phone" type="tel"
+                               maxlength="20" autocomplete="tel" required>
+                    </div>
+
+                    <div class="profile-field">
+                        <label for="address-province">Tỉnh / Thành phố *</label>
+                        <input id="address-province" type="text"
+                               maxlength="100" autocomplete="address-level1" required>
+                    </div>
+
+                    <div class="profile-field">
+                        <label for="address-district">Quận / Huyện *</label>
+                        <input id="address-district" type="text"
+                               maxlength="100" autocomplete="address-level2" required>
+                    </div>
+
+                    <div class="profile-field">
+                        <label for="address-ward">Phường / Xã *</label>
+                        <input id="address-ward" type="text"
+                               maxlength="100" required>
+                    </div>
+
+                    <div class="profile-field">
+                        <label for="address-street-address">Số nhà, tên đường *</label>
+                        <textarea id="address-street-address"
+                                  maxlength="255" autocomplete="street-address" required></textarea>
+                    </div>
+
+                    <label class="profile-checkbox">
+                        <input id="address-is-default" type="checkbox">
+                        Đặt làm địa chỉ mặc định
+                    </label>
+
+                    <div class="profile-address-actions">
+                        <button class="profile-btn" id="address-save" type="submit">
+                            Lưu địa chỉ
+                        </button>
+                        <button class="profile-btn secondary" id="address-cancel-edit"
+                                type="button" hidden>
+                            Hủy chỉnh sửa
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+
+    <footer class="profile-footer">
+        CHERI Fashion · Phong cách riêng của bạn
+    </footer>
+</div>
+
+<script src="../assets/js/auth.js"></script>
+
+</body>
+</html>

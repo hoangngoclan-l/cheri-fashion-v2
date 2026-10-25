@@ -1,0 +1,513 @@
+
+/* ========================================
+   CHERI FASHION - HOMEPAGE
+======================================== */
+
+.home-hero {
+    display: grid;
+    grid-template-columns: 0.9fr 1.1fr;
+    align-items: center;
+    gap: 40px;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 52px 5%;
+}
+
+.home-hero-content {
+    padding: 24px 0;
+}
+
+.home-eyebrow {
+    display: inline-block;
+    color: #a36e7e;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 1.8;
+}
+
+.home-hero h1 {
+    margin: 20px 0;
+    color: #30262a;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(38px, 5vw, 66px);
+    font-weight: 400;
+    line-height: 1.12;
+    letter-spacing: -1.5px;
+}
+
+.home-hero-content > p {
+    max-width: 420px;
+    margin: 0 0 28px;
+    color: #756a6e;
+    font-size: 15px;
+    line-height: 1.9;
+}
+
+.home-primary-btn,
+.home-outline-btn {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 18px;
+    min-height: 48px;
+    padding: 13px 22px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-decoration: none;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.home-primary-btn {
+    background: #382b30;
+    color: #fff;
+}
+
+.home-primary-btn:hover {
+    background: #a36e7e;
+}
+
+.home-hero-image {
+    position: relative;
+    min-width: 0;
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: #f5ecee;
+}
+
+.home-hero-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.hero-image-note {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    padding: 10px 13px;
+    background: rgba(255, 255, 255, 0.88);
+    color: #382b30;
+    font-size: 10px;
+    letter-spacing: 2px;
+}
+
+/* Section chung */
+
+.home-section {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 64px 5%;
+}
+
+.home-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.home-section-heading h2,
+.home-brand-inner h2 {
+    margin: 9px 0 8px;
+    color: #30262a;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(27px, 3vw, 38px);
+    font-weight: 400;
+    line-height: 1.25;
+}
+
+.home-section-heading p {
+    margin: 8px 0 0;
+    color: #82767b;
+    font-size: 13px;
+    line-height: 1.8;
+}
+
+.home-text-link {
+    flex-shrink: 0;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #c9a5ae;
+    color: #49383e;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+/* Danh mục */
+
+.category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.category-card {
+    display: block;
+    min-width: 0;
+    color: #30262a;
+    text-decoration: none;
+}
+
+.category-card-image {
+    aspect-ratio: 4 / 5;
+    overflow: hidden;
+    background: #f5eff0;
+}
+
+.category-card-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.4s ease;
+}
+
+.category-card:hover .category-card-image img {
+    transform: scale(1.04);
+}
+
+.category-card > span {
+    display: block;
+    margin-top: 14px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 20px;
+}
+
+.category-card > small {
+    display: block;
+    margin-top: 7px;
+    color: #99868d;
+    font-size: 9px;
+    letter-spacing: 1.3px;
+}
+
+/* Khu vực sản phẩm */
+
+.home-featured {
+    background: #fcf9f9;
+}
+
+.home-product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px 16px;
+}
+
+.home-loading {
+    grid-column: 1 / -1;
+    padding: 35px 0;
+    color: #82767b;
+    font-size: 13px;
+    text-align: center;
+}
+
+/* Card được tạo từ home.js */
+
+.home-product-card {
+    min-width: 0;
+}
+
+.home-product-image {
+    position: relative;
+    display: block;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+    background: #f4eeee;
+}
+
+.home-product-image img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.35s ease;
+}
+
+.home-product-card:hover .home-product-image img {
+    transform: scale(1.035);
+}
+
+.home-product-info {
+    padding-top: 12px;
+}
+
+.home-product-category {
+    color: #a0878f;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+
+.home-product-name {
+    display: block;
+    overflow: hidden;
+    min-height: 40px;
+    max-height: 40px;
+    margin: 7px 0;
+    color: #30262a;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 20px;
+    text-decoration: none;
+}
+
+.home-product-price {
+    color: #382b30;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.home-product-old-price {
+    margin-left: 7px;
+    color: #a99da1;
+    font-size: 12px;
+    font-weight: 400;
+    text-decoration: line-through;
+}
+
+/* Banner thương hiệu */
+
+.home-brand-banner {
+    margin: 20px 5%;
+    background: #f5e9ec;
+}
+
+.home-brand-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 65px 8%;
+}
+
+.home-brand-inner h2 {
+    margin-top: 14px;
+    font-size: clamp(32px, 4vw, 48px);
+}
+
+.home-brand-inner p {
+    max-width: 450px;
+    margin: 15px 0 25px;
+    color: #75656b;
+    font-size: 14px;
+    line-height: 1.9;
+}
+
+.home-outline-btn {
+    border: 1px solid #6c505a;
+    color: #49383e;
+}
+
+.home-outline-btn:hover {
+    background: #382b30;
+    color: white;
+}
+
+/* Lợi ích */
+
+.home-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 25px;
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 45px 5% 65px;
+    text-align: center;
+}
+
+.home-benefit {
+    padding: 12px;
+}
+
+.benefit-icon {
+    color: #a36e7e;
+    font-size: 27px;
+}
+
+.home-benefit h3 {
+    margin: 12px 0 8px;
+    color: #382b30;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 18px;
+    font-weight: 400;
+}
+
+.home-benefit p {
+    margin: 0;
+    color: #82767b;
+    font-size: 12px;
+    line-height: 1.8;
+}
+
+/* Popup */
+
+.home-popup-overlay {
+    position: fixed;
+    z-index: 9999;
+    inset: 0;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: rgba(37, 27, 31, 0.55);
+}
+
+.home-popup-overlay.is-visible {
+    display: flex;
+}
+
+.home-popup {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    padding: 48px 35px 32px;
+    background: #fffafa;
+    text-align: center;
+}
+
+.home-popup h2 {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+
+    margin: 18px 0 12px;
+    padding: 0;
+
+    color: #382b30;
+    font-family: Times New Roman, Helvetica, sans-serif;
+    font-size: 31px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: normal;
+    word-spacing: normal;
+    word-break: normal;
+    overflow-wrap: normal;
+    white-space: normal;
+    text-align: center;
+}
+
+.home-popup > p {
+    margin: 0 0 24px;
+    color: #82767b;
+    font-size: 13px;
+    line-height: 1.9;
+}
+
+.home-popup-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    width: 36px;
+    height: 36px;
+    border: 0;
+    background: transparent;
+    color: #382b30;
+    cursor: pointer;
+    font-size: 28px;
+}
+
+.home-popup-dismiss {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin-top: 22px;
+    color: #82767b;
+    font-size: 11px;
+}
+
+/* Responsive */
+
+@media (max-width: 900px) {
+    .home-hero {
+        gap: 25px;
+        padding-right: 4%;
+        padding-left: 4%;
+    }
+
+    .category-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 25px 16px;
+    }
+
+    .home-product-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px 12px;
+    }
+
+    .home-section {
+        padding: 48px 4%;
+    }
+}
+
+@media (max-width: 600px) {
+    .home-hero {
+        grid-template-columns: 1fr;
+        gap: 25px;
+        padding: 28px 5% 35px;
+    }
+
+    .home-hero-content {
+        padding: 5px 0;
+    }
+
+    .home-hero h1 {
+        margin: 14px 0;
+        font-size: 43px;
+    }
+
+    .home-hero-content > p {
+        font-size: 13px;
+    }
+
+    .home-hero-image {
+        aspect-ratio: 4 / 4.5;
+    }
+
+    .home-section {
+        padding: 40px 5%;
+    }
+
+    .home-section-heading {
+        align-items: start;
+        gap: 12px;
+    }
+
+    .home-section-heading h2 {
+        font-size: 27px;
+    }
+
+    .home-text-link {
+        margin-top: 28px;
+        font-size: 11px;
+    }
+
+    .category-card > span {
+        font-size: 18px;
+    }
+
+    .home-brand-banner {
+        margin: 8px 4%;
+    }
+
+    .home-brand-inner {
+        padding: 45px 7%;
+    }
+
+    .home-benefits {
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 30px 6% 45px;
+    }
+
+    .home-popup {
+        padding: 42px 22px 27px;
+    }
+
+    .home-popup h2 {
+        font-size: 27px;
+    }
+}

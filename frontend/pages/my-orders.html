@@ -1,0 +1,218 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đơn hàng của tôi | CHERI.</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script src="../assets/js/my-orders.js" defer></script>
+    <style>
+        .orders-page {
+            max-width: 1000px;
+            margin: 36px auto;
+            padding: 20px;
+        }
+
+        .orders-heading {
+            margin-bottom: 24px;
+        }
+
+        .orders-heading h1 {
+            margin-bottom: 8px;
+            font-size: clamp(25px, 4vw, 34px);
+        }
+
+        .orders-heading p,
+        .order-muted {
+            color: #777;
+        }
+
+        .orders-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            margin-bottom: 22px;
+        }
+
+        .orders-toolbar select {
+            min-width: 190px;
+            padding: 11px 12px;
+            border: 1px solid #e5d5dc;
+            border-radius: 8px;
+            background: #fff;
+            font: inherit;
+        }
+
+        .orders-message {
+            margin: 16px 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            background: #fff5f9;
+            color: #8e3157;
+        }
+
+        .orders-message[data-type="error"] {
+            background: #fff0f0;
+            color: #a12626;
+        }
+
+        .order-card {
+            margin-bottom: 16px;
+            padding: 20px;
+            border: 1px solid #eee1e7;
+            border-radius: 13px;
+            background: white;
+        }
+
+        .order-card-top,
+        .order-card-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .order-code {
+            display: block;
+            margin-top: 6px;
+            color: #a83264;
+            overflow-wrap: anywhere;
+        }
+
+        .order-status {
+            display: inline-block;
+            padding: 6px 11px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .order-status.pending { background: #fff1d7; color: #895d00; }
+        .order-status.confirmed { background: #e9f1ff; color: #2459a8; }
+        .order-status.processing { background: #f0e9ff; color: #6842a6; }
+        .order-status.shipping { background: #e3f4ff; color: #17638c; }
+        .order-status.completed { background: #e5f7eb; color: #237343; }
+        .order-status.cancelled { background: #f3eeee; color: #785b5b; }
+        .order-status.unknown { background: #eee; color: #555; }
+
+        .order-card-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 24px;
+            margin: 18px 0;
+            padding: 14px 0;
+            border-top: 1px solid #f1e8ed;
+            border-bottom: 1px solid #f1e8ed;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .order-price {
+            display: block;
+            margin-top: 5px;
+            color: #b74775;
+            font-size: 20px;
+        }
+
+        .order-detail-button,
+        .orders-button {
+            display: inline-block;
+            padding: 11px 16px;
+            border: 1px solid #b74775;
+            border-radius: 8px;
+            background: #b74775;
+            color: white;
+            text-decoration: none;
+            text-align: center;
+        }
+
+        .orders-empty {
+            padding: 42px 20px;
+            text-align: center;
+            border: 1px dashed #e5c9d6;
+            border-radius: 13px;
+            background: #fffafd;
+        }
+
+        .orders-empty-icon {
+            color: #b74775;
+            font-size: 42px;
+        }
+
+        .orders-empty p {
+            color: #777;
+            margin-bottom: 22px;
+        }
+
+        .orders-account {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .orders-logout {
+            padding: 9px 13px;
+            border: 1px solid #e5d5dc;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font: inherit;
+        }
+
+        @media (max-width: 600px) {
+            .orders-page { margin: 18px auto; padding: 14px; }
+            .order-card { padding: 15px; }
+            .order-card-bottom { align-items: flex-start; }
+            .order-detail-button { width: 100%; box-sizing: border-box; }
+            .orders-toolbar select { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <main class="orders-page">
+        <header class="orders-heading">
+            <a href="index.html" style="color:#b74775;text-decoration:none">
+                ← Tiếp tục mua sắm
+            </a>
+            <h1>Đơn hàng của tôi</h1>
+            <p>Theo dõi đơn hàng và cập nhật trạng thái giao hàng.</p>
+        </header>
+
+        <section class="orders-toolbar">
+            <div class="orders-account">
+                <div>
+                    <div class="order-muted">Xin chào,</div>
+                    <strong id="orders-user-name">Khách hàng</strong>
+                </div>
+                <button id="orders-logout" class="orders-logout" type="button">
+                    Đăng xuất
+                </button>
+            </div>
+
+            <label>
+                <span class="order-muted">Lọc trạng thái: </span>
+                <select id="orders-filter">
+                    <option value="all">Tất cả đơn hàng</option>
+                    <option value="pending">Chờ xác nhận</option>
+                    <option value="confirmed">Đã xác nhận</option>
+                    <option value="processing">Đang xử lý</option>
+                    <option value="shipping">Đang giao hàng</option>
+                    <option value="completed">Hoàn thành</option>
+                    <option value="cancelled">Đã hủy</option>
+                </select>
+            </label>
+        </section>
+
+        <div id="orders-message" class="orders-message"
+             role="status" aria-live="polite" hidden></div>
+
+        <section id="orders-list" aria-live="polite">
+            <p>Đang tải đơn hàng...</p>
+        </section>
+    </main>
+</body>
+</html>

@@ -1,0 +1,232 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CHERI FASHION | Mặc đẹp theo cách của bạn</title>
+    <meta name="description"
+          content="Khám phá bộ sưu tập thời trang nữ hiện đại tại Cheri Fashion.">
+
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/home.css">
+
+    <script src="../assets/js/app.js" defer></script>
+    <script src="../assets/js/home.js" defer></script>
+</head>
+
+<body>
+    <!-- Header dùng chung -->
+    <div data-include="header"></div>
+
+    <main>
+        <!-- HERO BANNER -->
+        <section class="home-hero">
+            <div class="home-hero-content">
+                <span class="home-eyebrow">
+                    CHERI FASHION · NEW SEASON
+                </span>
+
+                <h1>Mặc đẹp theo<br>cách của bạn.</h1>
+
+                <p>
+                    Những thiết kế tinh giản, hiện đại và nữ tính
+                    dành cho mọi khoảnh khắc của bạn.
+                </p>
+
+                <a href="shop.html" class="home-primary-btn">
+                    KHÁM PHÁ BỘ SƯU TẬP
+                    <span aria-hidden="true">→</span>
+                </a>
+            </div>
+
+            <div class="home-hero-image">
+                <img
+                    src="../assets/images/banners/hero.webp"
+                    alt="Bộ sưu tập thời trang mới Cheri Fashion"
+                    fetchpriority="high"
+                >
+                <span class="hero-image-note">
+                    LESS BUT BETTER
+                </span>
+            </div>
+        </section>
+
+        <!-- DANH MỤC -->
+        <section class="home-section home-categories">
+            <div class="home-section-heading">
+                <div>
+                    <span class="home-eyebrow">FIND YOUR STYLE</span>
+                    <h2>Khám phá danh mục</h2>
+                </div>
+
+                <a href="shop.html" class="home-text-link">
+                    Xem tất cả →
+                </a>
+            </div>
+
+            <div class="category-grid">
+                <a class="category-card"
+                   href="shop.html?category=ao">
+                    <div class="category-card-image category-image-top">
+                        <img src="../assets/images/products/ao-kieu.webp"
+                             alt="Áo nữ" loading="lazy">
+                    </div>
+                    <span>Áo nữ</span>
+                    <small>EVERYDAY ESSENTIALS</small>
+                </a>
+
+                <a class="category-card"
+                   href="shop.html?category=vay">
+                    <div class="category-card-image category-image-dress">
+                        <img src="../assets/images/products/vay-thanh-lich.webp"
+                             alt="Váy và đầm" loading="lazy">
+                    </div>
+                    <span>Váy &amp; Đầm</span>
+                    <small>FEMININE MOMENTS</small>
+                </a>
+
+                <a class="category-card"
+                   href="shop.html?category=quan">
+                    <div class="category-card-image category-image-pants">
+                        <img src="../assets/images/products/quan-ong-rong.webp"
+                             alt="Quần nữ" loading="lazy">
+                    </div>
+                    <span>Quần nữ</span>
+                    <small>EFFORTLESS STYLE</small>
+                </a>
+
+                <a class="category-card"
+                   href="shop.html?category=set-do-nu">
+                    <div class="category-card-image category-image-set">
+                        <img src="../assets/images/products/set-do-nu.webp"
+                             alt="Set đồ nữ" loading="lazy">
+                    </div>
+                    <span>Set đồ nữ</span>
+                    <small>READY TO WEAR</small>
+                </a>
+            </div>
+        </section>
+
+        <!-- SẢN PHẨM NỔI BẬT -->
+        <section class="home-section home-featured">
+            <div class="home-section-heading">
+                <div>
+                    <span class="home-eyebrow">OUR SELECTION</span>
+                    <h2>Được yêu thích</h2>
+                    <p>Những thiết kế dành riêng cho phong cách của bạn.</p>
+                </div>
+
+                <a href="shop.html" class="home-text-link">
+                    Tất cả sản phẩm →
+                </a>
+            </div>
+
+            <!-- home.js sẽ hiển thị sản phẩm vào đây -->
+            <div class="home-product-grid" id="home-featured-products">
+                <p class="home-loading">Đang tải sản phẩm...</p>
+            </div>
+        </section>
+
+        <!-- BANNER THƯƠNG HIỆU -->
+        <section class="home-brand-banner">
+            <div class="home-brand-inner">
+                <span class="home-eyebrow">YOUR STYLE, YOUR STORY</span>
+                <h2>Đơn giản hơn.<br>Phong cách hơn.</h2>
+                <p>
+                    Cheri đồng hành cùng bạn tạo nên phong cách
+                    riêng từ những lựa chọn nhỏ nhất.
+                </p>
+                <a href="shop.html" class="home-outline-btn">
+                    TÌM PHONG CÁCH CỦA BẠN →
+                </a>
+            </div>
+        </section>
+
+        <!-- HÀNG MỚI VỀ -->
+        <section class="home-section home-new-arrivals">
+            <div class="home-section-heading">
+                <div>
+                    <span class="home-eyebrow">JUST ARRIVED</span>
+                    <h2>Hàng mới về</h2>
+                    <p>Cập nhật những thiết kế mới nhất từ Cheri.</p>
+                </div>
+
+                <a href="shop.html?collection=new"
+                   class="home-text-link">
+                    Khám phá →
+                </a>
+            </div>
+
+            <div class="home-product-grid" id="home-new-products">
+                <p class="home-loading">Đang tải sản phẩm...</p>
+            </div>
+        </section>
+
+        <!-- LÝ DO CHỌN CHERI -->
+        <section class="home-benefits">
+            <div class="home-benefit">
+                <span class="benefit-icon" aria-hidden="true">✧</span>
+                <h3>Thiết kế tinh giản</h3>
+                <p>Dễ phối đồ, phù hợp nhiều hoàn cảnh.</p>
+            </div>
+
+            <div class="home-benefit">
+                <span class="benefit-icon" aria-hidden="true">♡</span>
+                <h3>Chọn lựa có gu</h3>
+                <p>Tập trung vào kiểu dáng và tính ứng dụng.</p>
+            </div>
+
+            <div class="home-benefit">
+                <span class="benefit-icon" aria-hidden="true">↗</span>
+                <h3>Mua sắm dễ dàng</h3>
+                <p>Khám phá sản phẩm thuận tiện trên mọi thiết bị.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer dùng chung -->
+    <div data-include="footer"></div>
+
+    <!-- Popup ưu đãi -->
+    <div class="home-popup-overlay"
+         id="home-promo-popup"
+         aria-hidden="true">
+
+        <section class="home-popup"
+                 role="dialog"
+                 aria-modal="true"
+                 aria-labelledby="home-popup-title">
+
+            <button type="button"
+                    class="home-popup-close"
+                    id="home-popup-close"
+                    aria-label="Đóng cửa sổ">
+                ×
+            </button>
+
+            <span class="home-eyebrow">A LITTLE GIFT FOR YOU</span>
+
+            <h2 id="home-popup-title">Chào bạn đến với Cheri!</h2>
+
+            <p>
+                Khám phá bộ sưu tập mới và tìm những thiết kế
+                phù hợp với phong cách của riêng bạn.
+            </p>
+
+            <a href="shop.html" class="home-primary-btn">
+                KHÁM PHÁ NGAY →
+            </a>
+
+            <label class="home-popup-dismiss">
+                <input type="checkbox" id="home-popup-no-show">
+                Không hiển thị lại trong phiên này
+            </label>
+        </section>
+    </div>
+    <script src="../assets/js/auth.js"></script>
+</body>
+</html>

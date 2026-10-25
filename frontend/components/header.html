@@ -1,0 +1,219 @@
+
+<div class="announcement-bar">
+    CHERI FASHION &nbsp;·&nbsp; PHONG CÁCH RIÊNG, DẤU ẤN RIÊNG
+</div>
+
+<header class="site-header">
+    <div class="header-main">
+        <button
+            type="button"
+            class="mobile-menu-toggle"
+            id="mobile-menu-toggle"
+            aria-label="Mở menu"
+            aria-expanded="false"
+            aria-controls="main-navigation"
+        >
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
+
+        <a class="brand-logo" href="index.html" aria-label="CHERI Fashion - Trang chủ">
+            CHERI<span>.</span>
+        </a>
+
+        <nav class="main-navigation" id="main-navigation" aria-label="Menu chính">
+            <a class="nav-link" href="index.html">Trang chủ</a>
+            <a class="nav-link" href="shop.html">Sản phẩm</a>
+
+            <div class="nav-item-dropdown">
+                <a
+                    class="nav-link dropdown-trigger"
+                    href="shop.html"
+                    aria-expanded="false"
+                >
+                    Danh mục <span class="dropdown-arrow">⌄</span>
+                </a>
+
+                <div class="dropdown-panel">
+                    <a href="shop.html?category=ao">Áo nữ</a>
+                    <a href="shop.html?category=ao-khoac">Áo khoác</a>
+                    <a href="shop.html?category=quan">Quần</a>
+                    <a href="shop.html?category=vay">Váy &amp; Đầm</a>
+                    <a href="shop.html?category=set-do-nu">Set đồ nữ</a>
+                </div>
+            </div>
+
+            <a class="nav-link" href="shop.html?collection=new">Hàng mới về</a>
+            <a class="nav-link nav-sale" href="shop.html?collection=sale">SALE</a>
+
+            <div class="nav-item-dropdown">
+                <a
+                    class="nav-link dropdown-trigger"
+                    href="about.html"
+                    aria-expanded="false"
+                >
+                    Giới thiệu <span class="dropdown-arrow">⌄</span>
+                </a>
+
+                <div class="dropdown-panel">
+                    <a href="about.html">Về CHERI</a>
+                    <a href="membership.html">Thành viên</a>
+                    <a href="stores.html">Chi nhánh</a>
+                    <a href="faq.html">Câu hỏi thường gặp</a>
+                </div>
+            </div>
+        </nav>
+
+        <div class="header-tools">
+            <!-- Tìm kiếm -->
+            <button
+                type="button"
+                class="header-icon"
+                id="search-toggle"
+                aria-label="Tìm kiếm sản phẩm"
+                aria-expanded="false"
+                aria-controls="header-search-panel"
+            >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.7" stroke-linecap="round">
+                    <circle cx="10.8" cy="10.8" r="6.8"></circle>
+                    <path d="m16 16 4.2 4.2"></path>
+                </svg>
+            </button>
+
+            <!-- Yêu thích -->
+            <a class="header-icon header-icon-badge"
+               href="wishlist.html"
+               aria-label="Yêu thích">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.8-7.5 1.1-1.1a5.5 5.5 0 0 0-.1-7.8Z"></path>
+                </svg>
+                <span id="wishlist-count">0</span>
+            </a>
+
+            <!-- Giỏ hàng -->
+            <a class="header-icon header-icon-badge"
+               href="cart.html"
+               aria-label="Giỏ hàng">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M5 8h14l1 13H4L5 8Z"></path>
+                    <path d="M9 8V6a3 3 0 0 1 6 0v2"></path>
+                </svg>
+                <span id="cart-count">0</span>
+            </a>
+
+            <!-- Tài khoản -->
+            
+<!-- Tài khoản -->
+<div class="header-account">
+    <button
+        type="button"
+        class="header-icon account-trigger"
+        id="account-toggle"
+        aria-label="Tài khoản"
+        aria-expanded="false"
+        aria-controls="account-menu"
+    >
+        <svg viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" stroke-linejoin="round"
+             aria-hidden="true">
+            <circle cx="12" cy="8" r="4"></circle>
+            <path d="M4 21a8 8 0 0 1 16 0"></path>
+        </svg>
+        <span class="account-trigger-label" id="account-trigger-label">
+            Tài khoản
+        </span>
+    </button>
+
+    <!-- Menu tài khoản -->
+    <div id="account-menu" class="account-menu" hidden>
+        <!-- Thông tin khách hàng -->
+        <div class="account-menu-user">
+            <div class="account-avatar" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.7"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="4"></circle>
+                    <path d="M4 21a8 8 0 0 1 16 0"></path>
+                </svg>
+            </div>
+
+            <div class="account-user-details">
+                <div class="account-menu-heading" id="account-menu-heading">
+                    Tài khoản của bạn
+                </div>
+
+                <div id="account-menu-user" hidden>
+                    <div id="account-menu-user-name"></div>
+                    <div id="account-menu-user-email"></div>
+                    <div class="account-member-label">Thành viên CHERI.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thông tin cá nhân -->
+        <a href="profile.html" class="account-menu-item"
+           id="account-profile-link" hidden>
+            <span class="account-menu-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.7"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="8" r="4"></circle>
+                    <path d="M4 21a8 8 0 0 1 16 0"></path>
+                </svg>
+            </span>
+            <span class="account-menu-item-text">
+                <strong>Thông tin cá nhân</strong>
+                <small>Cập nhật thông tin và địa chỉ</small>
+            </span>
+            <span class="account-menu-chevron" aria-hidden="true">›</span>
+        </a>
+
+        <!-- Quản lý đơn hàng -->
+        <a href="my-orders.html" class="account-menu-item"
+           id="account-orders-link" hidden>
+            <span class="account-menu-item-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.7"
+                     stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m12 3 9 5-9 5-9-5 9-5Z"></path>
+                    <path d="M3 8v9l9 5 9-5V8"></path>
+                    <path d="M12 13v9"></path>
+                </svg>
+            </span>
+            <span class="account-menu-item-text">
+                <strong>Quản lý đơn hàng</strong>
+                <small>Theo dõi đơn hàng của bạn</small>
+            </span>
+            <span class="account-menu-chevron" aria-hidden="true">›</span>
+        </a>
+
+        <!-- Chưa đăng nhập -->
+        <a href="account.html" id="account-login-link"
+           class="account-login-link">
+            Đăng nhập / Đăng ký
+        </a>
+
+        <!-- Đăng xuất -->
+        <div class="account-menu-footer" id="account-menu-footer" hidden>
+            <button type="button" id="account-logout-button">
+                <svg viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="1.7"
+                     stroke-linecap="round" stroke-linejoin="round"
+                     aria-hidden="true">
+                    <path d="M10 17l5-5-5-5"></path>
+                    <path d="M15 12H3"></path>
+                    <path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7"></path>
+                </svg>
+                Đăng xuất
+            </button>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</header>
