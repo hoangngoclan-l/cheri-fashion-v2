@@ -204,7 +204,10 @@ function updateCheriAccountMenu() {
     const orders = get("account-orders-link");
     const profile = get("account-profile-link");
     const login = get("account-login-link");
-    const logout = get("account-logout-button");
+    const footer = get("account-menu-footer");
+    
+    const logout = get
+    ("account-logout-button");
 
     if (label) {
         label.textContent = loggedIn ? (name || "Tài khoản") : "Tài khoản";
@@ -235,6 +238,8 @@ function updateCheriAccountMenu() {
     if (orders) orders.hidden = !loggedIn;
     if (profile) profile.hidden = !loggedIn;
     if (login) login.hidden = loggedIn;
+
+    if (footer) footer.hidden = !loggedIn;
     if (logout) logout.hidden = !loggedIn;
 
     if (logout && logout.dataset.authBound !== "true") {

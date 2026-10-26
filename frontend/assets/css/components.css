@@ -427,3 +427,266 @@
     font-size: 12px;
     text-align: center;
 }
+
+
+/* =====================================================
+   CHERI - ACCOUNT DROPDOWN
+   Giao diện dùng chung cho trang chủ và các trang con
+   ===================================================== */
+
+/* Vị trí nút tài khoản và menu */
+.header-account {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.header-account .account-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.header-account .account-trigger-label {
+    max-width: 125px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Khung menu */
+#account-menu.account-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 9999;
+    width: 320px;
+    max-width: calc(100vw - 24px);
+    max-height: min(80vh, 520px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    background: #fff;
+    color: #40323a;
+    border: 1px solid #f0dce5;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(85, 43, 60, 0.14);
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Giữ nguyên hành vi ẩn/hiện của JavaScript */
+#account-menu[hidden],
+#account-menu [hidden] {
+    display: none !important;
+}
+
+/* Phần thông tin khách hàng */
+#account-menu .account-menu-user {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 18px;
+    background: #fff6fa;
+    border-bottom: 1px solid #f3e4eb;
+}
+
+#account-menu .account-avatar {
+    display: flex;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    color: #b74775;
+    background: #f9e4ed;
+    border-radius: 50%;
+}
+
+#account-menu .account-avatar svg {
+    width: 22px;
+    height: 22px;
+}
+
+#account-menu .account-user-details {
+    flex: 1;
+    min-width: 0;
+}
+
+#account-menu .account-menu-heading {
+    padding: 0;
+    margin: 0 0 8px;
+    border: 0;
+    color: #b74775;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+#account-menu #account-menu-user {
+    min-width: 0;
+}
+
+#account-menu-user-name {
+    margin-bottom: 3px;
+    color: #40323a;
+    font-size: 13px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+#account-menu-user-email {
+    color: #887780;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+
+#account-menu .account-member-label {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 3px 8px;
+    color: #a63d6a;
+    background: #f9e4ed;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* Các lựa chọn tài khoản */
+#account-menu a.account-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 12px 16px;
+    box-sizing: border-box;
+    color: #493941;
+    background: #fff;
+    border-bottom: 1px solid #f5edf1;
+    text-decoration: none;
+    transition: background 0.18s ease, color 0.18s ease;
+}
+
+#account-menu a.account-menu-item:hover {
+    color: #b74775;
+    background: #fff5f9;
+}
+
+#account-menu .account-menu-item-icon {
+    display: flex;
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    color: #b74775;
+    background: #fff0f6;
+    border-radius: 9px;
+}
+
+#account-menu .account-menu-item-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+#account-menu .account-menu-item-text {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: 3px;
+}
+
+#account-menu .account-menu-item-text strong {
+    color: inherit;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+#account-menu .account-menu-item-text small {
+    color: #8b7c84;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+#account-menu .account-menu-chevron {
+    flex: 0 0 auto;
+    color: #b7a3ad;
+    font-size: 22px;
+}
+
+/* Đăng nhập / đăng ký khi chưa có phiên đăng nhập */
+#account-menu a.account-login-link {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 12px 18px;
+    box-sizing: border-box;
+    color: #b74775;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+#account-menu a.account-login-link:hover {
+    background: #fff5f9;
+}
+
+/* Khu vực đăng xuất */
+#account-menu .account-menu-footer {
+    padding: 12px 16px;
+    background: #fff;
+    border-top: 1px solid #f3e4eb;
+}
+
+#account-menu #account-logout-button {
+    display: flex;
+    width: 100%;
+    min-height: 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 12px;
+    box-sizing: border-box;
+    color: #b74775;
+    background: #fff;
+    border: 1px solid #e8c3d3;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.18s ease;
+}
+
+#account-menu #account-logout-button:hover {
+    background: #fff1f6;
+}
+
+#account-menu #account-logout-button svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Điện thoại */
+@media (max-width: 560px) {
+    #account-menu.account-menu {
+        right: -4px;
+        width: min(300px, calc(100vw - 20px));
+        max-height: 75vh;
+    }
+
+    #account-menu .account-menu-user {
+        padding: 15px;
+    }
+
+    #account-menu a.account-menu-item {
+        min-height: 64px;
+        padding: 10px 14px;
+    }
+}

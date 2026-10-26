@@ -1,9 +1,9 @@
 
 "use strict";
 
-const CHECKOUT_CART_KEY = "cheri_checkout_items";
-const CART_STORAGE_KEY = "cheri_cart";
-const BUY_NOW_KEY = "cheri_buy_now";
+const CHECKOUT_CART_KEY = cheriStorageKey("cheri_checkout_items");
+const CART_STORAGE_KEY = cheriStorageKey("cheri_cart");
+const BUY_NOW_KEY = cheriStorageKey("cheri_buy_now");
 
 const ADDRESS_API = "https://www.tinhthanhpho.com/api/v1";
 
@@ -488,7 +488,7 @@ function checkoutBindForm() {
             };
 
             localStorage.setItem(
-                "cheri_order_confirmation",
+                cheriStorageKey ("cheri_order_confirmation"),
                 JSON.stringify(confirmedOrder)
             );
 

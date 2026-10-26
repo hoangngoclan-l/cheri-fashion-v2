@@ -214,17 +214,118 @@ function setupHeaderInteractions() {
     });
 }
 
+
+/**
+ * CHERI: Tạo khóa lưu riêng cho từng tài khoản.
+ * Giữ dữ liệu cũ làm bản dự phòng, không xóa khóa cũ.
+ */
+function cheriGetStorageUserId() {
+    const token = localStorage.getItem("cheri_auth_token");
+
+    if (!token) return null;
+
+    try {
+        const user = JSON.parse(
+            localStorage.getItem("cheri_auth_user") || "null"
+        );
+
+        if (!user) return null;
+
+        const id = user.userId ?? user.user_id ?? user.id;
+
+        // Ưu tiên ID tài khoản từ backend.
+        // Email chỉ là phương án dự phòng nếu dữ liệu user không có ID.
+        const identity = id ?? user.email;
+
+        if (identity === undefined || identity === null || identity === "") {
+            return null;
+        }
+
+        return String(identity);
+    } catch {
+        return null;
+    }
+}
+
+function cheriStorageKey(baseKey) {
+    const userId = cheriGetStorageUserId();
+
+    // Khách chưa đăng nhập có vùng lưu riêng, không dùng chung với tài khoản.
+    if (!userId) {
+        return `${baseKey}_guest`;
+    }
+
+    const encodedId = encodeURIComponent(userId);
+    const userKey = `${baseKey}_user_${encodedId}`;
+    const migrationKey = "cheri_legacy_storage_migration_owner";
+
+    if (!localStorage.getItem(migrationKey)) {
+        const legacyCart = localStorage.getItem("cheri_cart");
+        const legacyWishlist = localStorage.getItem("cheri_wishlist");
+
+        if (legacyCart !== null || legacyWishlist !== null) {
+            if (
+                legacyCart !== null &&
+                !localStorage.getItem(
+                    `cheri_cart_user_${encodedId}`
+                )
+            ) {
+                localStorage.setItem(
+                    `cheri_cart_user_${encodedId}`,
+                    legacyCart
+                );
+            }
+
+            if (
+                legacyWishlist !== null &&
+                !localStorage.getItem(
+                    `cheri_wishlist_user_${encodedId}`
+                )
+            ) {
+                localStorage.setItem(
+                    `cheri_wishlist_user_${encodedId}`,
+                    legacyWishlist
+                );
+            }
+
+            // Chỉ đánh dấu sau khi đã sao chép dữ liệu thành công.
+            localStorage.setItem(migrationKey, userId);
+        }
+    }
+
+    return userKey;
+}
+
+
 function updateHeaderCounts() {
     const cartCount = document.getElementById("cart-count");
     const wishlistCount = document.getElementById("wishlist-count");
 
+    // Chưa có phiên đăng nhập thì không hiển thị số lượng cá nhân.
+    const token = localStorage.getItem("cheri_auth_token");
+    let user = null;
+
+    try {
+        user = JSON.parse(
+            localStorage.getItem("cheri_auth_user") || "null"
+        );
+    } catch {
+        user = null;
+    }
+
+    if (!token || !user) {
+        if (cartCount) cartCount.textContent = "";
+        if (wishlistCount) wishlistCount.textContent = "";
+        return;
+    }
+
     try {
         const cart = JSON.parse(
-            localStorage.getItem("cheri_cart") || "[]"
+            localStorage.getItem(cheriStorageKey("cheri_cart")) || "[]"
         );
 
         const wishlist = JSON.parse(
-            localStorage.getItem("cheri_wishlist") || "[]"
+            localStorage.getItem(cheriStorageKey("cheri_wishlist")) || "[]"
         );
 
         if (cartCount) {
@@ -246,19 +347,22 @@ function updateHeaderCounts() {
                 }, 0)
                 : 0;
 
-            cartCount.textContent = String(totalQuantity);
+            cartCount.textContent =
+                totalQuantity > 0 ? String(totalQuantity) : "";
         }
 
         if (wishlistCount) {
-            wishlistCount.textContent = String(
-                Array.isArray(wishlist) ? wishlist.length : 0
-            );
+            const total = Array.isArray(wishlist)
+                ? wishlist.length
+                : 0;
+
+            wishlistCount.textContent = total > 0 ? String(total) : "";
         }
     } catch (error) {
-        console.warn("Dữ liệu giỏ hàng không hợp lệ:", error);
+        console.warn("Dữ liệu giỏ hàng/yêu thích không hợp lệ:", error);
 
-        if (cartCount) cartCount.textContent = "0";
-        if (wishlistCount) wishlistCount.textContent = "0";
+        if (cartCount) cartCount.textContent = "";
+        if (wishlistCount) wishlistCount.textContent = "";
     }
 }
 
@@ -268,7 +372,12 @@ document.addEventListener("cheri:wishlist-updated", updateHeaderCounts);
 
 // Cập nhật nếu thay đổi localStorage từ tab khác.
 window.addEventListener("storage", event => {
-    if (event.key === "cheri_cart" || event.key === "cheri_wishlist") {
+    if (
+        event.key === "cheri_cart" ||
+        event.key === "cheri_wishlist" ||
+        event.key?.startsWith("cheri_cart_user_") ||
+        event.key?.startsWith("cheri_wishlist_user_")
+    ) {
         updateHeaderCounts();
     }
 });

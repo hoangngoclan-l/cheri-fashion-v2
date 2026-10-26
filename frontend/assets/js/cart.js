@@ -1,7 +1,7 @@
 
 "use strict";
 
-const CART_STORAGE_KEY = "cheri_cart";
+const CART_STORAGE_KEY = cheriStorageKey("cheri_cart");
 
 function cartRead() {
     try {
@@ -411,11 +411,10 @@ function cartBindEvents() {
                     return;
                 }
 
-                localStorage.setItem(
-                    "cheri_checkout_items",
+                localStorage.setItem(cheriStorageKey     
+                    ("cheri_checkout_items"),
                     JSON.stringify(selectedItems)
                 );
-
                 window.location.href = "checkout.html";
             });
 
