@@ -1,0 +1,32 @@
+
+### Đăng ký tài khoản thử nghiệm
+POST http://localhost:3000/api/auth/register
+Content-Type: application/json
+
+{
+  "fullName": "Khach Hang Thu Nghiem",
+  "email": "khachhang.thu@example.com",
+  "phone": "0900000000",
+  "password": "CheriTest2026!"
+}
+
+### Đăng nhập
+POST http://localhost:3000/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "khachhang.thu@example.com",
+  "password": "CheriTest2026!"
+}
+
+
+### Xem danh sách đơn hàng của tài khoản đang đăng nhập
+GET http://localhost:3000/api/orders/my-orders
+Authorization: Bearer DAN_TOKEN_JWT_VAO_DAY
+
+### Xem chi tiết đơn hàng theo ID
+GET http://localhost:3000/api/orders/my-orders/1
+Authorization: Bearer DAN_TOKEN_JWT_VAO_DAY
+
+// cái dưới bỏ
+Authorization: Bearer YOUR_LOGIN_TOKEN
