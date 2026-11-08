@@ -8,82 +8,9 @@
 document.addEventListener("DOMContentLoaded", initShopPage);
 
 const SHOP_PAGE_SIZE = 12;
-const SHOP_FALLBACK_IMAGE = "../assets/images/products/no-image.webp";
+const SHOP_FALLBACK_IMAGE = "../assets/images/products/ao-kieu.webp";
 
-const SHOP_SAMPLE_PRODUCTS = [
-    {
-        id: "cheri-001",
-        name: "Áo kiểu tối giản",
-        category: "Áo nữ",
-        price: 320000,
-        oldPrice: 0,
-        image: "../assets/images/products/ao-kieu.webp",
-        colors: ["Trắng", "Hồng pastel", "Đen"],
-        sizes: ["S", "M", "L"],
-        stock: 20,
-        isNew: true
-    },
-    {
-        id: "cheri-002",
-        name: "Váy nữ thanh lịch",
-        category: "Váy & Đầm",
-        price: 490000,
-        oldPrice: 550000,
-        image: "../assets/images/products/vay-thanh-lich.webp",
-        colors: ["Kem", "Đen", "Hồng pastel"],
-        sizes: ["S", "M", "L"],
-        stock: 15,
-        isNew: true
-    },
-    {
-        id: "cheri-003",
-        name: "Quần ống rộng",
-        category: "Quần",
-        price: 420000,
-        oldPrice: 0,
-        image: "../assets/images/products/quan-ong-rong.webp",
-        colors: ["Đen", "Be", "Nâu"],
-        sizes: ["S", "M", "L", "XL"],
-        stock: 18,
-        isNew: false
-    },
-    {
-        id: "cheri-004",
-        name: "Chân váy hiện đại",
-        category: "Váy & Đầm",
-        price: 380000,
-        oldPrice: 430000,
-        image: "../assets/images/products/chan-vay.webp",
-        colors: ["Đen", "Trắng"],
-        sizes: ["S", "M", "L"],
-        stock: 12,
-        isNew: false
-    },
-    {
-        id: "cheri-005",
-        name: "Áo khoác thanh lịch",
-        category: "Áo khoác",
-        price: 690000,
-        oldPrice: 0,
-        image: "../assets/images/products/ao-khoac.webp",
-        colors: ["Kem", "Nâu", "Đen"],
-        sizes: ["S", "M", "L"],
-        stock: 8,
-        isNew: true
-    },
-    {
-        id: "cheri-006",
-        name: "Set đồ nữ hiện đại",
-        category: "Set đồ nữ",
-        price: 720000,
-        oldPrice: 790000,
-        image: "../assets/images/products/set-do-nu.webp",
-        colors: ["Be", "Đen"],
-        sizes: ["S", "M", "L"],
-        stock: 10,
-        isNew: true
-    }
-];
+
 
 let shopProducts = [];
 let shopFilteredProducts = [];
@@ -269,35 +196,57 @@ function readShopQuery() {
    ========================================================= */
 
 async function loadShopProducts() {
+    let loadError = null;
+
     try {
-        const response = await fetch("/api/products");
+        const response = await fetch("/api/products", {
+            headers: { Accept: "application/json" }
+        });
 
         if (!response.ok) {
-            throw new Error(`API sản phẩm trả về ${response.status}`);
+            throw new Error(`Máy chủ trả về mã ${response.status} khi tải sản phẩm.`);
         }
 
         const result = await response.json();
-
         const rawProducts = Array.isArray(result)
             ? result
-            : result.products || result.data || [];
+            : result.products ?? result.data ?? [];
 
-        if (!rawProducts.length) {
-            throw new Error("API chưa trả về sản phẩm");
+        if (!Array.isArray(rawProducts)) {
+            throw new Error("Dữ liệu sản phẩm không đúng định dạng.");
         }
 
-        shopProducts = rawProducts.map(normalizeShopProduct);
+        shopProducts = rawProducts
+            .map(normalizeShopProduct)
+            .filter(product =>
+                product.id &&
+                product.name &&
+                Number.isFinite(product.price) &&
+                product.price >= 0
+            );
     } catch (error) {
-        console.warn(
-            "Không lấy được sản phẩm từ API, sử dụng dữ liệu mẫu:",
-            error
-        );
-
-        shopProducts = SHOP_SAMPLE_PRODUCTS.map(normalizeShopProduct);
+        loadError = error;
+        shopProducts = [];
+        console.error("Không thể tải danh sách sản phẩm:", error);
     }
 
     await loadShopWishlist();
     applyShopFilters();
+
+    if (loadError) {
+        const empty = document.getElementById("shop-empty");
+        if (empty) {
+            empty.innerHTML = `
+                <span aria-hidden="true">!</span>
+                <h2>Chưa thể tải sản phẩm</h2>
+                <p>Không thể kết nối với cửa hàng. Vui lòng kiểm tra máy chủ rồi thử lại.</p>
+                <a href="shop.html" class="shop-empty-retry">Tải lại trang</a>
+            `;
+            empty.hidden = false;
+        }
+        const count = document.getElementById("shop-result-count");
+        if (count) count.textContent = "Chưa tải được dữ liệu";
+    }
 }
 
 
@@ -374,15 +323,15 @@ function normalizeShopProduct(product, index = 0) {
 
     const colors = normalizeOptions(
         rawColors ?? (product.color ? [product.color] : []),
-        ["Trắng", "Đen"]
+        ["Màu mặc định"]
     );
 
     const sizes = normalizeOptions(
         rawSizes ?? (product.size ? [product.size] : []),
-        ["S", "M", "L", "XL", "Free size"]
+        ["S", "M", "L", "XL"]
     );
 
-    const stock = Number(product.stock ?? product.quantity ?? 99);
+    const stock = Number(product.stock ?? product.quantity ?? 0);
 
     return {
         ...product,
@@ -394,9 +343,9 @@ function normalizeShopProduct(product, index = 0) {
         image: product.image ?? product.image_url ?? product.thumbnail ?? "",
         colors,
         sizes,
-        stock: Math.max(0, Number.isFinite(stock) ? stock : 99),
-        isNew: Boolean(product.isNew ?? product.is_new),
-        isSale: Boolean(product.isSale ?? product.is_sale)
+        stock: Math.max(0, Number.isFinite(stock) ? stock : 0),
+        isNew: [true, 1, "1"].includes(product.isNew ?? product.is_new),
+        isSale: [true, 1, "1"].includes(product.isSale ?? product.is_sale)
     };
 }
 
