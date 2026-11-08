@@ -511,3 +511,36 @@
         font-size: 27px;
     }
 }
+
+
+.home-product-image {
+    position: relative;
+}
+
+.home-product-badge {
+    position: absolute;
+    z-index: 1;
+    top: 10px;
+    left: 10px;
+    padding: 6px 9px;
+    color: #fff;
+    background: #a36e7e;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .4px;
+}
+
+.home-product-image.is-image-missing {
+    display: grid;
+    place-items: center;
+    color: #9a858d;
+    font-size: 12px;
+}
+
+.home-loading a {
+    display: inline-block;
+    margin-top: 8px;
+    color: #a36e7e;
+    font-size: 12px;
+    text-decoration: underline;
+}
