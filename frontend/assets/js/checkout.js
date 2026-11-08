@@ -239,7 +239,9 @@ async function checkoutLoadWards(provinceName) {
     );
 
     if (!province) {
-        wardInput.placeholder = "Chọn đúng tỉnh/thành trong danh sách";
+        wardInput.placeholder = provinceList.length
+            ? "Chọn đúng tỉnh/thành trong danh sách"
+            : "Nhập tên phường / xã";
         return;
     }
 
