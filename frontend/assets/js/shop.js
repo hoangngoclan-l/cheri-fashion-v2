@@ -1100,7 +1100,8 @@ async function toggleShopWishlist(product) {
 }
 
 
-20. CẬP NHẬT TRẠNG THÁI NÚT YÊU THÍCH
+/* =========================================================
+   20. CẬP NHẬT TRẠNG THÁI NÚT YÊU THÍCH
    ========================================================= */
 
 function updateShopWishlistButtons() {
