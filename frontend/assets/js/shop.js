@@ -91,6 +91,7 @@ let shopCurrentPage = 1;
 let shopSelectedProduct = null;
 let shopSelectedAction = "cart";
 let shopToastTimer = null;
+let shopWishlistIds = new Set();
 
 
 /* =========================================================
@@ -295,7 +296,30 @@ async function loadShopProducts() {
         shopProducts = SHOP_SAMPLE_PRODUCTS.map(normalizeShopProduct);
     }
 
+    await loadShopWishlist();
     applyShopFilters();
+}
+
+
+async function loadShopWishlist() {
+    shopWishlistIds = new Set();
+
+    if (window.CheriCommerceAPI?.isLoggedIn()) {
+        try {
+            const result = await window.CheriCommerceAPI.getWishlist();
+            const items = Array.isArray(result.items) ? result.items : [];
+            shopWishlistIds = new Set(items.map(item => String(item.product_id ?? item.id)));
+            return;
+        } catch (error) {
+            console.warn("Không thể tải danh sách yêu thích:", error);
+            showShopToast("Chưa thể tải danh sách yêu thích từ tài khoản.");
+        }
+    }
+
+    const key = typeof cheriStorageKey === "function" ? cheriStorageKey("cheri_wishlist") : "cheri_wishlist_guest";
+    shopWishlistIds = new Set(readShopStorage(key).map(item => String(
+        typeof item === "object" ? item.id ?? item.product_id : item
+    )));
 }
 
 
@@ -1070,90 +1094,71 @@ async function confirmShopVariant(event) {
    ========================================================= */
 
 async function toggleShopWishlist(product) {
-    const wishlistKey = "cheri_wishlist";
-    let wishlist = readShopStorage(wishlistKey);
     const productId = String(product.id);
+    const alreadySaved = shopWishlistIds.has(productId);
 
-    const alreadySaved = wishlist.some(item =>
-        String(typeof item === "object" ? item.id : item) === productId
-    );
-
-    // Đồng bộ danh sách yêu thích lên backend nếu đã đăng nhập.
     if (window.CheriCommerceAPI?.isLoggedIn()) {
-        const numericProductId = Number(product.id);
-
-        if (!Number.isInteger(numericProductId) || numericProductId <= 0) {
+        const numericId = Number(product.id);
+        if (!Number.isInteger(numericId) || numericId <= 0) {
             showShopToast("Mã sản phẩm không hợp lệ.");
             return;
         }
 
         try {
             if (alreadySaved) {
-                await window.CheriCommerceAPI.removeFromWishlist(product.id);
+                await window.CheriCommerceAPI.removeFromWishlist(numericId);
+                shopWishlistIds.delete(productId);
+                showShopToast("Đã xóa khỏi danh sách yêu thích.");
             } else {
-                await window.CheriCommerceAPI.addToWishlist(product.id);
+                await window.CheriCommerceAPI.addToWishlist(numericId);
+                shopWishlistIds.add(productId);
+                showShopToast("Đã thêm vào danh sách yêu thích.");
             }
         } catch (error) {
-            console.warn("Không thể đồng bộ danh sách yêu thích:", error);
+            showShopToast(error.message || "Chưa thể cập nhật danh sách yêu thích.");
+            return;
+        }
+    } else {
+        const key = typeof cheriStorageKey === "function" ? cheriStorageKey("cheri_wishlist") : "cheri_wishlist_guest";
+        let wishlist = readShopStorage(key);
 
-            showShopToast(
-                error.message || "Chưa thể cập nhật danh sách yêu thích."
+        if (alreadySaved) {
+            wishlist = wishlist.filter(item =>
+                String(typeof item === "object" ? item.id ?? item.product_id : item) !== productId
             );
+            shopWishlistIds.delete(productId);
+            showShopToast("Đã xóa khỏi danh sách yêu thích.");
+        } else {
+            wishlist.push({
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                price: product.price,
+                image: product.image
+            });
+            shopWishlistIds.add(productId);
+            showShopToast("Đã thêm vào danh sách yêu thích.");
+        }
 
+        if (!writeShopStorage(key, wishlist)) {
+            showShopToast("Không thể lưu danh sách yêu thích.");
             return;
         }
     }
 
-    if (alreadySaved) {
-        wishlist = wishlist.filter(item =>
-            String(typeof item === "object" ? item.id : item) !== productId
-        );
-
-        showShopToast("Đã xóa khỏi danh sách yêu thích.");
-    } else {
-        wishlist.push({
-            id: product.id,
-            name: product.name,
-            category: product.category,
-            price: product.price,
-            image: product.image
-        });
-
-        showShopToast("Đã thêm vào danh sách yêu thích.");
-    }
-
-    if (!writeShopStorage(wishlistKey, wishlist)) {
-        showShopToast("Không thể lưu danh sách yêu thích.");
-        return;
-    }
-
-    document.dispatchEvent(
-        new CustomEvent("cheri:wishlist-updated")
-    );
-
+    document.dispatchEvent(new CustomEvent("cheri:wishlist-updated"));
     updateShopWishlistButtons();
 }
 
 
-/* =========================================================
-   20. CẬP NHẬT TRẠNG THÁI NÚT YÊU THÍCH
+20. CẬP NHẬT TRẠNG THÁI NÚT YÊU THÍCH
    ========================================================= */
 
 function updateShopWishlistButtons() {
-    const wishlist = readShopStorage("cheri_wishlist");
-
-    const ids = new Set(
-        wishlist.map(item =>
-            String(typeof item === "object" ? item.id : item)
-        )
-    );
-
     document.querySelectorAll(".shop-wishlist-button").forEach(button => {
-        const active = ids.has(button.dataset.productId);
-
+        const active = shopWishlistIds.has(button.dataset.productId);
         button.classList.toggle("is-active", active);
         button.textContent = active ? "♥" : "♡";
-
         button.setAttribute("aria-pressed", String(active));
     });
 }
