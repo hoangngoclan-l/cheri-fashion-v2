@@ -3,9 +3,12 @@
 
 document.addEventListener("DOMContentLoaded", () => {
     const token = localStorage.getItem("cheri_auth_token");
-    const user = JSON.parse(
-        localStorage.getItem("cheri_auth_user") || "null"
-    );
+    let user = null;
+    try {
+        user = JSON.parse(localStorage.getItem("cheri_auth_user") || "null");
+    } catch {
+        localStorage.removeItem("cheri_auth_user");
+    }
 
     const list = document.getElementById("orders-list");
     const message = document.getElementById("orders-message");
