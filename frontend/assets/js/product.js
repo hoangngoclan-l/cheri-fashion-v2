@@ -1,102 +1,99 @@
-const PRODUCT_SAMPLE_DATA = [
-    {
-        id: 1,
-        name: "Áo kiểu tối giản",
-        category: "Áo nữ",
-        price: 320000,
-        oldPrice: 390000,
-        image: "../assets/images/products/ao-kieu.webp",
-        description:
-            "Thiết kế tối giản, dễ phối cùng quần jeans, chân váy hoặc quần âu. Phù hợp để mặc đi học, đi làm và dạo phố.",
-        sizes: ["S", "M", "L", "XL"],
-        colors: [
-            { name: "Trắng", code: "#f5f0e8" },
-            { name: "Đen", code: "#292629" },
-            { name: "Hồng nhạt", code: "#e8c6ce" }
-        ],
-        stock: 20
-    },
-    {
-        id: 2,
-        name: "Váy nữ thanh lịch",
-        category: "Váy",
-        price: 490000,
-        oldPrice: 0,
-        image: "../assets/images/products/vay-thanh-lich.webp",
-        description:
-            "Thiết kế nữ tính với đường nét thanh lịch. Dễ dàng kết hợp cùng giày bệt, giày cao gót và phụ kiện yêu thích.",
-        sizes: ["S", "M", "L"],
-        colors: [
-            { name: "Kem", code: "#e8ddca" },
-            { name: "Đen", code: "#292629" }
-        ],
-        stock: 15
-    },
-    {
-        id: 3,
-        name: "Quần ống rộng hiện đại",
-        category: "Quần",
-        price: 420000,
-        oldPrice: 0,
-        image: "../assets/images/products/quan-ong-rong.webp",
-        description:
-            "Phom quần ống rộng mang lại vẻ ngoài hiện đại, dễ phối với áo kiểu và áo thun.",
-        sizes: ["S", "M", "L", "XL"],
-        colors: [
-            { name: "Đen", code: "#292629" },
-            { name: "Be", code: "#c8b69f" }
-        ],
-        stock: 18
-    },
-    {
-        id: 4,
-        name: "Chân váy hiện đại",
-        category: "Váy",
-        price: 380000,
-        oldPrice: 0,
-        image: "../assets/images/products/chan-vay.webp",
-        description:
-            "Chân váy dễ phối đồ, phù hợp với nhiều phong cách từ nhẹ nhàng đến thanh lịch.",
-        sizes: ["S", "M", "L"],
-        colors: [
-            { name: "Đen", code: "#292629" },
-            { name: "Kem", code: "#e8ddca" }
-        ],
-        stock: 12
-    },
-    {
-        id: 5,
-        name: "Áo khoác thanh lịch",
-        category: "Áo khoác",
-        price: 550000,
-        oldPrice: 0,
-        image: "../assets/images/products/ao-khoac.webp",
-        description:
-            "Áo khoác nữ với thiết kế hiện đại, dễ kết hợp cùng trang phục thường ngày.",
-        sizes: ["S", "M", "L", "XL"],
-        colors: [
-            { name: "Be", code: "#c8b69f" },
-            { name: "Đen", code: "#292629" }
-        ],
-        stock: 10
-    },
-    {
-        id: 6,
-        name: "Set đồ nữ hiện đại",
-        category: "Set đồ nữ",
-        price: 620000,
-        oldPrice: 0,
-        image: "../assets/images/products/set-do-nu.webp",
-        description:
-            "Set đồ đồng bộ giúp bạn tiết kiệm thời gian phối trang phục mà vẫn giữ được vẻ chỉn chu.",
-        sizes: ["S", "M", "L"],
-        colors: [
-            { name: "Kem", code: "#e8ddca" },
-            { name: "Hồng nhạt", code: "#e8c6ce" }
-        ],
-        stock: 8
+"use strict";
+
+let currentProduct = null;
+let selectedSize = "";
+let selectedColor = "";
+let productQuantity = 1;
+let productWishlistIds = new Set();
+
+function productFormatPrice(price) {
+    return new Intl.NumberFormat("vi-VN").format(Number(price) || 0) + "đ";
+}
+
+function productEscapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function productGetId(product) {
+    return String(product.id ?? product.product_id ?? "");
+}
+
+function productNormalize(raw) {
+    let sizes = raw.sizes ?? raw.available_sizes ?? ["S", "M", "L", "XL"];
+    if (typeof sizes === "string") {
+        sizes = sizes.split(",").map(size => size.trim()).filter(Boolean);
     }
-];
+    if (!Array.isArray(sizes) || !sizes.length) {
+        sizes = ["S", "M", "L", "XL"];
+    }
+
+    let colors = raw.colors ?? raw.available_colors ?? [];
+    if (typeof colors === "string") {
+        colors = colors.split(",").map(name => ({
+            name: name.trim(),
+            code: "#d8c6cc"
+        })).filter(color => color.name);
+    }
+    if (!Array.isArray(colors) || !colors.length) {
+        colors = [{ name: "Màu mặc định", code: "#d8c6cc" }];
+    } else {
+        colors = colors.map(color => typeof color === "string"
+            ? { name: color, code: "#d8c6cc" }
+            : {
+                name: String(color.name ?? color.label ?? "Màu mặc định"),
+                code: String(color.code ?? "#d8c6cc")
+            }
+        );
+    }
+
+    const price = Number(raw.price ?? raw.sale_price ?? 0);
+    const stock = Number(raw.stock ?? raw.quantity ?? 0);
+
+    return {
+        id: raw.id ?? raw.product_id,
+        name: String(raw.name ?? raw.product_name ?? "Sản phẩm CHERI"),
+        category: String(raw.category_name ?? raw.category ?? "Thời trang nữ"),
+        price: Number.isFinite(price) && price >= 0 ? price : 0,
+        oldPrice: Number(raw.old_price ?? raw.original_price ?? 0),
+        image: String(raw.image ?? raw.image_url ?? "../assets/images/products/ao-kieu.webp"),
+        description: String(raw.description ?? "Thông tin sản phẩm đang được cập nhật."),
+        sizes,
+        colors,
+        stock: Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0
+    };
+}
+
+async function productLoadAll() {
+    try {
+        const response = await fetch("/api/products", {
+            headers: { Accept: "application/json" }
+        });
+
+        if (!response.ok) {
+            throw new Error("Không thể tải danh sách sản phẩm.");
+        }
+
+        const result = await response.json();
+        const rows = Array.isArray(result) ? result : result.products ?? result.data ?? [];
+
+        if (!Array.isArray(rows)) {
+            throw new Error("Dữ liệu sản phẩm không đúng định dạng.");
+        }
+
+        return rows
+            .map(productNormalize)
+            .filter(product => product.id !== undefined && product.id !== null);
+    } catch (error) {
+        console.error("Lỗi tải dữ liệu sản phẩm:", error);
+        return [];
+    }
+}
 
 let currentProduct = null;
 let selectedSize = "";
@@ -717,6 +714,18 @@ async function productInit() {
     }
 
     const products = await productLoadAll();
+
+    if (!products.length) {
+        if (container) {
+            container.innerHTML = `
+                <div class="product-error" role="alert">
+                    Hiện chưa thể tải thông tin sản phẩm từ cửa hàng.
+                    <p><a href="shop.html">Quay lại cửa hàng →</a></p>
+                </div>
+            `;
+        }
+        return;
+    }
 
     const found = products.find(product =>
         String(product.id) === String(productId)
