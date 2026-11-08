@@ -3,7 +3,7 @@
 require("dotenv").config();
 const {
     pool,
-    testDatabaseConnection
+    verifyDatabaseConnection
 } = require("./config/database");
 
 const express = require("express");
@@ -173,7 +173,7 @@ app.use("/api", (req, res) => {
 
 // Khởi động máy chủ.
 async function startServer() {
-    await testDatabaseConnection();
+    await verifyDatabaseConnection();
 
     app.listen(PORT, () => {
         console.log("------------------------------------");
