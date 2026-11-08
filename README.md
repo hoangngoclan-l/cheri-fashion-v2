@@ -31,7 +31,7 @@ npm run dev
 - Giỏ hàng: `/frontend/pages/cart.html`
 - Thanh toán: `/frontend/pages/checkout.html`
 - Danh sách yêu thích: `/frontend/pages/wishlist.html`
-- Kiểm tra backend: `/api/health)
+- Kiểm tra backend: `/api/health`
 - Kiểm tra danh sách sản phẩm: `/api/products`
 
 ## Cấu trúc
