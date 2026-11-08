@@ -613,10 +613,17 @@ function productRenderRelated(products) {
 
 async function productInit() {
     const container = document.getElementById("product-detail-content");
+    const relatedContainer = document.getElementById("product-related-grid");
+    const showRelatedMessage = message => {
+        if (relatedContainer) {
+            relatedContainer.innerHTML = `<p class="product-error">${productEscapeHTML(message)}</p>`;
+        }
+    };
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("id");
 
     if (!productId) {
+        showRelatedMessage("Chọn sản phẩm để xem các gợi ý liên quan.");
         if (container) {
             container.innerHTML = `
                 <div class="product-error">
@@ -632,6 +639,7 @@ async function productInit() {
     const products = await productLoadAll();
 
     if (!products.length) {
+        showRelatedMessage("Chưa thể tải sản phẩm liên quan.");
         if (container) {
             container.innerHTML = `
                 <div class="product-error" role="alert">
@@ -648,6 +656,7 @@ async function productInit() {
     );
 
     if (!found) {
+        showRelatedMessage("Không có sản phẩm liên quan để hiển thị.");
         if (container) {
             container.innerHTML = `
                 <div class="product-error">
