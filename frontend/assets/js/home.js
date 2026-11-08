@@ -1,61 +1,7 @@
+"use strict";
 
-/* ========================================
-   CHERI FASHION - HOMEPAGE
-======================================== */
-
-const HOME_SAMPLE_PRODUCTS = [
-    {
-        id: 1,
-        name: "Áo kiểu tối giản",
-        category: "Áo nữ",
-        price: 320000,
-        image: "../assets/images/products/ao-kieu.webp",
-        collection: "featured"
-    },
-    {
-        id: 2,
-        name: "Váy nữ thanh lịch",
-        category: "Váy",
-        price: 490000,
-        image: "../assets/images/products/vay-thanh-lich.webp",
-        collection: "new"
-    },
-    {
-        id: 3,
-        name: "Quần ống rộng hiện đại",
-        category: "Quần",
-        price: 420000,
-        image: "../assets/images/products/quan-ong-rong.webp",
-        collection: "featured"
-    },
-    {
-        id: 4,
-        name: "Chân váy nữ",
-        category: "Váy",
-        price: 380000,
-        image: "../assets/images/products/chan-vay.webp",
-        collection: "new"
-    },
-    {
-        id: 5,
-        name: "Áo khoác thanh lịch",
-        category: "Áo khoác",
-        price: 550000,
-        image: "../assets/images/products/ao-khoac.webp",
-        collection: "new"
-    },
-    {
-        id: 6,
-        name: "Set đồ nữ hiện đại",
-        category: "Set đồ nữ",
-        price: 620000,
-        image: "../assets/images/products/set-do-nu.webp",
-        collection: "featured"
-    }
-];
-
-function homeFormatPrice(price) {
-    return new Intl.NumberFormat("vi-VN").format(price) + "đ";
+function homeFormatPrice(value) {
+    return new Intl.NumberFormat("vi-VN").format(Number(value) || 0) + "đ";
 }
 
 function homeEscapeHTML(value) {
@@ -68,82 +14,71 @@ function homeEscapeHTML(value) {
     })[character]);
 }
 
-function homeNormalizeProduct(product, index) {
+function homeNormalizeProduct(raw) {
     return {
-        id: product.id ?? product.product_id ?? index + 1,
-        name: product.name ?? product.product_name ?? "Sản phẩm Cheri",
-        category: product.category_name ?? product.category ?? "Thời trang nữ",
-        price: Number(product.price ?? product.sale_price ?? 0),
-        oldPrice: Number(product.old_price ?? product.original_price ?? 0),
-        image: product.image ?? product.image_url
-            ?? "../assets/images/products/ao-kieu.webp",
-        collection: product.collection ?? ""
+        id: raw.id ?? raw.product_id,
+        name: String(raw.name ?? raw.product_name ?? "Sản phẩm CHERI").trim(),
+        category: String(raw.category ?? raw.category_name ?? "Thời trang nữ").trim(),
+        price: Number(raw.price ?? raw.sale_price ?? 0),
+        oldPrice: Number(raw.old_price ?? raw.original_price ?? 0),
+        image: String(raw.image ?? raw.image_url ?? "").trim(),
+        isNew: raw.is_new === true || Number(raw.is_new) === 1,
+        isSale: raw.is_sale === true || Number(raw.is_sale) === 1
     };
 }
 
 async function homeLoadProducts() {
-    try {
-        const response = await fetch("/api/products");
+    const response = await fetch("/api/products", {
+        headers: { Accept: "application/json" }
+    });
 
-        if (!response.ok) {
-            throw new Error("Không thể tải sản phẩm từ API.");
-        }
-
-        const result = await response.json();
-        const products = Array.isArray(result)
-            ? result
-            : result.products ?? result.data ?? [];
-
-        if (!Array.isArray(products) || products.length === 0) {
-            return HOME_SAMPLE_PRODUCTS.map(homeNormalizeProduct);
-        }
-
-        return products.map(homeNormalizeProduct);
-    } catch (error) {
-        console.warn(
-            "Trang chủ đang sử dụng dữ liệu sản phẩm mẫu:",
-            error.message
-        );
-
-        return HOME_SAMPLE_PRODUCTS.map(homeNormalizeProduct);
+    if (!response.ok) {
+        throw new Error("Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.");
     }
+
+    const result = await response.json();
+    const rows = Array.isArray(result) ? result : result.products ?? result.data ?? [];
+
+    if (!Array.isArray(rows)) {
+        throw new Error("Dữ liệu sản phẩm từ máy chủ không đúng định dạng.");
+    }
+
+    return rows
+        .map(homeNormalizeProduct)
+        .filter(product =>
+            product.id !== undefined &&
+            product.id !== null &&
+            product.name &&
+            Number.isFinite(product.price) &&
+            product.price >= 0
+        );
 }
 
 function homeRenderProduct(product) {
     const id = encodeURIComponent(String(product.id));
     const name = homeEscapeHTML(product.name);
     const category = homeEscapeHTML(product.category);
-    const image = homeEscapeHTML(product.image);
-
+    const image = homeEscapeHTML(product.image || "../assets/images/products/ao-kieu.webp");
     const oldPrice = product.oldPrice > product.price
-        ? `<span class="home-product-old-price">
-               ${homeFormatPrice(product.oldPrice)}
-           </span>`
+        ? `<del class="home-product-old-price">${homeFormatPrice(product.oldPrice)}</del>`
         : "";
+    const badge = product.isSale
+        ? '<span class="home-product-badge">Ưu đãi</span>'
+        : product.isNew
+            ? '<span class="home-product-badge">Mới</span>'
+            : "";
 
     return `
         <article class="home-product-card">
-            <a class="home-product-image"
-               href="product.html?id=${id}"
-               aria-label="Xem ${name}">
-                <img
-                    src="${image}"
-                    alt="${name}"
-                    loading="lazy"
-                    onerror="this.onerror=null;this.style.opacity='0';"
-                >
+            <a class="home-product-image" href="product.html?id=${id}" aria-label="Xem ${name}">
+                ${badge}
+                <img src="${image}" alt="${name}" loading="lazy">
             </a>
-
             <div class="home-product-info">
                 <span class="home-product-category">${category}</span>
-
-                <a class="home-product-name"
-                   href="product.html?id=${id}">
-                    ${name}
-                </a>
-
+                <a class="home-product-name" href="product.html?id=${id}">${name}</a>
                 <div class="home-product-price">
-                    ${homeFormatPrice(product.price)}
+                    <span>${homeFormatPrice(product.price)}</span>
                     ${oldPrice}
                 </div>
             </div>
@@ -151,95 +86,80 @@ function homeRenderProduct(product) {
     `;
 }
 
-async function homeInitProducts() {
-    const featuredContainer =
-        document.getElementById("home-featured-products");
-
-    const newContainer =
-        document.getElementById("home-new-products");
-
-    if (!featuredContainer || !newContainer) return;
-
-    const products = await homeLoadProducts();
-
-    const featured = products.filter(product =>
-        product.collection === "featured"
-    );
-
-    const newArrivals = products.filter(product =>
-        product.collection === "new"
-    );
-
-    const featuredProducts = (featured.length ? featured : products)
-        .slice(0, 4);
-
-    const newProducts = (newArrivals.length
-        ? newArrivals
-        : [...products].reverse()
-    ).slice(0, 4);
-
-    featuredContainer.innerHTML = featuredProducts
-        .map(homeRenderProduct)
-        .join("");
-
-    newContainer.innerHTML = newProducts
-        .map(homeRenderProduct)
-        .join("");
+function homeRenderMessage(container, message, withLink = false) {
+    if (!container) return;
+    container.innerHTML = `
+        <div class="home-loading" role="status">
+            <p>${homeEscapeHTML(message)}</p>
+            ${withLink ? '<a href="shop.html">Khám phá tất cả sản phẩm</a>' : ""}
+        </div>
+    `;
 }
 
-/* Popup chỉ hiển thị một lần trong mỗi phiên trình duyệt */
+function homeBindImageFallback(container) {
+    container.querySelectorAll("img").forEach(image => {
+        image.addEventListener("error", () => {
+            if (image.dataset.fallbackApplied === "true") {
+                image.hidden = true;
+                image.closest(".home-product-image")?.classList.add("is-image-missing");
+                return;
+            }
 
+            image.dataset.fallbackApplied = "true";
+            image.src = "../assets/images/products/ao-kieu.webp";
+        }, { once: true });
+    });
+}
+
+async function homeInitProducts() {
+    const featuredContainer = document.getElementById("home-featured-products");
+    const newContainer = document.getElementById("home-new-products");
+    if (!featuredContainer || !newContainer) return;
+
+    try {
+        const products = await homeLoadProducts();
+
+        if (!products.length) {
+            homeRenderMessage(featuredContainer, "CHERI đang cập nhật sản phẩm mới.", true);
+            homeRenderMessage(newContainer, "Hiện chưa có sản phẩm để hiển thị.", true);
+            return;
+        }
+
+        const featured = products.filter(product => product.isSale || !product.isNew);
+        const newArrivals = products.filter(product => product.isNew);
+        const featuredProducts = (featured.length ? featured : products).slice(0, 4);
+        const newProducts = (newArrivals.length ? newArrivals : [...products].reverse()).slice(0, 4);
+
+        featuredContainer.innerHTML = featuredProducts.map(homeRenderProduct).join("");
+        newContainer.innerHTML = newProducts.map(homeRenderProduct).join("");
+        homeBindImageFallback(featuredContainer);
+        homeBindImageFallback(newContainer);
+    } catch (error) {
+        console.error("Không thể tải sản phẩm trang chủ:", error);
+        homeRenderMessage(featuredContainer, error.message || "Không thể tải sản phẩm.", true);
+        homeRenderMessage(newContainer, "Vui lòng quay lại sau ít phút.", true);
+    }
+}
 
 function homeInitPopup() {
     const popup = document.getElementById("home-promo-popup");
     const closeButton = document.getElementById("home-popup-close");
+    const noShowCheckbox = document.getElementById("home-popup-no-show");
 
     if (!popup || !closeButton) return;
 
-    // Kiểm tra popup đã được hiển thị trong phiên này chưa
     try {
-        if (sessionStorage.getItem("cheri_promo_shown") === "1") {
-            return;
-        }
-    } catch (error) {
-        console.warn("Không thể kiểm tra trạng thái popup.", error);
-    }
+        if (
+            sessionStorage.getItem("cheri_promo_shown") === "1" ||
+            sessionStorage.getItem("cheri_promo_dismissed") === "1"
+        ) return;
 
-    // Đánh dấu ngay khi chuẩn bị hiển thị để tránh hiện lại
-    try {
         sessionStorage.setItem("cheri_promo_shown", "1");
     } catch (error) {
-        console.warn("Không thể lưu trạng thái popup.", error);
+        console.warn("Không thể lưu trạng thái cửa sổ giới thiệu:", error);
     }
 
-    // Hiển thị sau 1,2 giây
-    window.setTimeout(() => {
-        popup.classList.add("is-visible");
-        popup.setAttribute("aria-hidden", "false");
-    }, 1200);
-
-    function closePopup() {
-        popup.classList.remove("is-visible");
-        popup.setAttribute("aria-hidden", "true");
-    }
-
-    closeButton.addEventListener("click", closePopup);
-
-    // Nhấn ra ngoài popup để đóng
-    popup.addEventListener("click", event => {
-        if (event.target === popup) {
-            closePopup();
-        }
-    });
-
-    // Nhấn ESC để đóng
-    document.addEventListener("keydown", event => {
-        if (event.key === "Escape") {
-            closePopup();
-        }
-    });
-
-    function closePopup() {
+    const closePopup = () => {
         popup.classList.remove("is-visible");
         popup.setAttribute("aria-hidden", "true");
 
@@ -247,21 +167,23 @@ function homeInitPopup() {
             try {
                 sessionStorage.setItem("cheri_promo_dismissed", "1");
             } catch (error) {
-                console.warn("Không thể lưu trạng thái popup.", error);
+                console.warn("Không thể lưu tùy chọn cửa sổ giới thiệu:", error);
             }
         }
-    }
+    };
+
+    window.setTimeout(() => {
+        popup.classList.add("is-visible");
+        popup.setAttribute("aria-hidden", "false");
+        closeButton.focus();
+    }, 1200);
 
     closeButton.addEventListener("click", closePopup);
-
     popup.addEventListener("click", event => {
-        if (event.target === popup) {
-            closePopup();
-        }
+        if (event.target === popup) closePopup();
     });
-
     document.addEventListener("keydown", event => {
-        if (event.key === "Escape") {
+        if (event.key === "Escape" && popup.classList.contains("is-visible")) {
             closePopup();
         }
     });
