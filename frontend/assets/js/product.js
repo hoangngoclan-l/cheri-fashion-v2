@@ -503,7 +503,7 @@ function productBuildCartItem() {
     };
 }
 
-function productAddToCart(buyNow) {
+async function productAddToCart(buyNow) {
     if (!productValidateSelection()) return;
 
     const item = productBuildCartItem();
@@ -518,32 +518,42 @@ function productAddToCart(buyNow) {
         return;
     }
 
-    try {
-        const cart = productReadStorage("cheri_cart");
-
-        const existingItem = cart.find(cartItem =>
-            String(cartItem.id ?? cartItem.product_id) === String(item.id) &&
-            String(cartItem.size ?? "") === item.size &&
-            String(cartItem.color ?? "") === item.color
-        );
-
-        if (existingItem) {
-            const oldQuantity = Number(existingItem.quantity ?? existingItem.qty ?? 0);
-            existingItem.quantity = Math.min(
-                currentProduct.stock,
-                oldQuantity + item.quantity
-            );
-            existingItem.qty = existingItem.quantity;
-        } else {
-            cart.push({ ...item, qty: item.quantity });
+    if (window.CheriCommerceAPI?.isLoggedIn()) {
+        try {
+            await window.CheriCommerceAPI.addToCart(item);
+        } catch (error) {
+            productShowToast(error.message || "Không thể thêm sản phẩm vào giỏ hàng.");
+            return;
         }
+    } else {
+        try {
+            const cart = productReadStorage("cheri_cart");
+            const existingItem = cart.find(cartItem =>
+                String(cartItem.id ?? cartItem.product_id) === String(item.id) &&
+                String(cartItem.size ?? "") === item.size &&
+                String(cartItem.color ?? cartItem.colorName ?? "") === item.color
+            );
 
-        productWriteStorage("cheri_cart", cart);
-        productDispatchUpdate("cheri:cart-updated");
-        productShowToast("Đã thêm sản phẩm vào giỏ hàng!");
-    } catch {
-        productShowToast("Không thể cập nhật giỏ hàng. Vui lòng thử lại.");
+            if (existingItem) {
+                const oldQuantity = Number(existingItem.quantity ?? existingItem.qty ?? 0);
+                existingItem.quantity = Math.min(
+                    currentProduct.stock,
+                    oldQuantity + item.quantity
+                );
+                existingItem.qty = existingItem.quantity;
+            } else {
+                cart.push({ ...item, qty: item.quantity });
+            }
+
+            productWriteStorage("cheri_cart", cart);
+        } catch {
+            productShowToast("Không thể cập nhật giỏ hàng. Vui lòng thử lại.");
+            return;
+        }
     }
+
+    productDispatchUpdate("cheri:cart-updated");
+    productShowToast("Đã thêm sản phẩm vào giỏ hàng!");
 }
 
 async function productLoadWishlist() {
