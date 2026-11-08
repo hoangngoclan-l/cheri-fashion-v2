@@ -10,9 +10,9 @@ USE cheri_fashion;
 
 CREATE TABLE IF NOT EXISTS users (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    full_name VARCHAR(120) NOT NULL,
+    full_name VARCHAR(150) NOT NULL,
     email VARCHAR(190) NOT NULL,
-    phone VARCHAR(24) NULL,
+    phone VARCHAR(30) NULL,
     password_hash VARCHAR(255) NOT NULL,
     role VARCHAR(30) NOT NULL DEFAULT 'customer',
     status VARCHAR(30) NOT NULL DEFAULT 'active',
@@ -49,8 +49,8 @@ CREATE TABLE IF NOT EXISTS products (
 CREATE TABLE IF NOT EXISTS addresses (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT UNSIGNED NOT NULL,
-    recipient_name VARCHAR(120) NOT NULL,
-    phone VARCHAR(24) NOT NULL,
+    recipient_name VARCHAR(150) NOT NULL,
+    phone VARCHAR(30) NOT NULL,
     province VARCHAR(120) NOT NULL,
     district VARCHAR(120) NOT NULL,
     ward VARCHAR(120) NOT NULL,
