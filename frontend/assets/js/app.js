@@ -301,48 +301,51 @@ async function updateHeaderCounts() {
     const cartCount = document.getElementById("cart-count");
     const wishlistCount = document.getElementById("wishlist-count");
     const token = localStorage.getItem("cheri_auth_token");
-    let user = null;
 
-    try {
-        user = JSON.parse(localStorage.getItem("cheri_auth_user") || "null");
-    } catch {
-        user = null;
-    }
+    if (!token) {
+        const guestCart = readHeaderStorage("cheri_cart");
+        const guestWishlist = readHeaderStorage("cheri_wishlist");
+        const quantity = guestCart.reduce((total, item) => {
+            const value = Number(item?.quantity ?? item?.qty ?? 1);
+            return total + (Number.isFinite(value) && value > 0 ? value : 0);
+        }, 0);
 
-    if (!token || !user) {
-        if (cartCount) cartCount.textContent = "";
-        if (wishlistCount) {
-            const guestWishlist = readHeaderWishlistStorage();
-            wishlistCount.textContent = guestWishlist.length ? String(guestWishlist.length) : "";
-        }
+        if (cartCount) cartCount.textContent = quantity ? String(quantity) : "";
+        if (wishlistCount) wishlistCount.textContent = guestWishlist.length ? String(guestWishlist.length) : "";
         return;
     }
 
-    try {
-        const cart = JSON.parse(localStorage.getItem(cheriStorageKey("cheri_cart")) || "[]");
-        if (cartCount) {
-            const totalQuantity = Array.isArray(cart)
-                ? cart.reduce((total, item) => {
-                    if (!item || typeof item !== "object") return total;
-                    const quantity = Number(item.quantity ?? item.qty ?? 0);
-                    return total + (Number.isFinite(quantity) && quantity > 0 ? quantity : 0);
-                }, 0)
-                : 0;
-            cartCount.textContent = totalQuantity > 0 ? String(totalQuantity) : "";
+    const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+    const [cartResult, wishlistResult] = await Promise.allSettled([
+        fetch("/api/cart", { headers }),
+        fetch("/api/wishlist", { headers })
+    ]);
+
+    if (cartCount) {
+        try {
+            if (cartResult.status !== "fulfilled" || !cartResult.value.ok) {
+                throw new Error("Không thể tải số lượng giỏ hàng.");
+            }
+            const data = await cartResult.value.json();
+            const items = Array.isArray(data.items) ? data.items : [];
+            const quantity = items.reduce((total, item) => {
+                const value = Number(item.quantity ?? 1);
+                return total + (Number.isFinite(value) && value > 0 ? value : 0);
+            }, 0);
+            cartCount.textContent = quantity ? String(quantity) : "";
+        } catch (error) {
+            console.warn("Không thể cập nhật số lượng giỏ hàng:", error);
+            cartCount.textContent = "";
         }
-    } catch (error) {
-        console.warn("Dữ liệu giỏ hàng không hợp lệ:", error);
-        if (cartCount) cartCount.textContent = "";
     }
 
     if (wishlistCount) {
         try {
-            const response = await fetch("/api/wishlist", {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            if (!response.ok) throw new Error(`Yêu cầu thất bại (${response.status})`);
-            const result = await response.json();
-            const items = Array.isArray(result.items) ? result.items : [];
+            if (wishlistResult.status !== "fulfilled" || !wishlistResult.value.ok) {
+                throw new Error("Không thể tải số lượng yêu thích.");
+            }
+            const data = await wishlistResult.value.json();
+            const items = Array.isArray(data.items) ? data.items : [];
             wishlistCount.textContent = items.length ? String(items.length) : "";
         } catch (error) {
             console.warn("Không thể cập nhật số lượng yêu thích:", error);
@@ -351,11 +354,11 @@ async function updateHeaderCounts() {
     }
 }
 
-function readHeaderWishlistStorage() {
+function readHeaderStorage(baseKey) {
     try {
         const key = typeof cheriStorageKey === "function"
-            ? cheriStorageKey("cheri_wishlist")
-            : "cheri_wishlist_guest";
+            ? cheriStorageKey(baseKey)
+            : `${baseKey}_guest`;
         const items = JSON.parse(localStorage.getItem(key) || "[]");
         return Array.isArray(items) ? items : [];
     } catch {
@@ -372,6 +375,8 @@ window.addEventListener("storage", event => {
     if (
         event.key === "cheri_cart" ||
         event.key === "cheri_wishlist" ||
+        event.key === "cheri_cart_guest" ||
+        event.key === "cheri_wishlist_guest" ||
         event.key?.startsWith("cheri_cart_user_") ||
         event.key?.startsWith("cheri_wishlist_user_")
     ) {
