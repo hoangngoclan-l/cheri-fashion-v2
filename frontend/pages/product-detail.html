@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="0; url=product.html">
+    <title>Chi tiết sản phẩm | CHERI FASHION</title>
+</head>
+<body>
+    <p>Đang chuyển đến trang chi tiết sản phẩm. <a id="product-detail-link" href="product.html">Tiếp tục</a></p>
+    <script>
+        const query = window.location.search;
+        const target = "product.html" + query;
+        document.getElementById("product-detail-link").href = target;
+        window.location.replace(target);
+    </script>
+</body>
+</html>
