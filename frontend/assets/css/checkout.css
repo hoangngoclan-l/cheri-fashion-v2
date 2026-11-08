@@ -437,3 +437,17 @@
         grid-column: auto;
     }
 }
+
+
+.checkout-payment-option.is-unavailable {
+    opacity: .58;
+    cursor: not-allowed;
+}
+
+.checkout-payment-option.is-unavailable * {
+    cursor: not-allowed;
+}
+
+.checkout-payment-option input:disabled {
+    accent-color: #b8a7ae;
+}
