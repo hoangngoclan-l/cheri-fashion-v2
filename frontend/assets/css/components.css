@@ -690,3 +690,86 @@
         padding: 10px 14px;
     }
 }
+
+
+/* Bảng tìm kiếm dùng chung trên toàn website */
+.header-search-panel {
+    position: relative;
+    z-index: 90;
+    width: 100%;
+    padding: 14px max(24px, calc((100% - 1280px) / 2));
+    background: #fffafb;
+    border-bottom: 1px solid #f0e3e8;
+    box-shadow: 0 8px 22px rgba(75, 42, 55, 0.06);
+}
+
+.header-search-panel[hidden] {
+    display: none !important;
+}
+
+.header-search-form {
+    display: flex;
+    width: min(720px, 100%);
+    min-height: 46px;
+    margin: 0 auto;
+    border: 1px solid #e7d6de;
+    border-radius: 6px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.header-search-form input {
+    flex: 1;
+    min-width: 0;
+    padding: 0 15px;
+    border: 0;
+    outline: 0;
+    color: #30262a;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+}
+
+.header-search-form input:focus-visible {
+    box-shadow: inset 0 0 0 2px #dba8ba;
+}
+
+.header-search-form button {
+    min-width: 108px;
+    padding: 0 18px;
+    border: 0;
+    color: #fff;
+    background: #382b30;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .2s ease;
+}
+
+.header-search-form button:hover {
+    background: #a36e7e;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 560px) {
+    .header-search-panel {
+        padding: 10px 12px;
+    }
+
+    .header-search-form button {
+        min-width: 82px;
+        padding: 0 12px;
+    }
+}
