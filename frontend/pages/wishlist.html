@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sản phẩm yêu thích | CHERI FASHION</title>
+    <meta name="description" content="Danh sách những thiết kế bạn yêu thích tại CHERI Fashion.">
+
+    <link rel="stylesheet" href="../assets/css/base.css">
+    <link rel="stylesheet" href="../assets/css/components.css">
+    <link rel="stylesheet" href="../assets/css/responsive.css">
+    <link rel="stylesheet" href="../assets/css/wishlist.css">
+
+    <script src="../assets/js/app.js" defer></script>
+    <script src="../assets/js/cheri-commerce-api.js" defer></script>
+    <script src="../assets/js/wishlist.js" defer></script>
+</head>
+<body>
+    <div data-include="header"></div>
+
+    <main class="wishlist-page">
+        <nav class="wishlist-breadcrumb" aria-label="Breadcrumb">
+            <a href="index.html">Trang chủ</a>
+            <span>/</span>
+            <span>Yêu thích</span>
+        </nav>
+
+        <header class="wishlist-heading">
+            <p class="wishlist-eyebrow">YOUR CHERI SELECTION</p>
+            <h1>Sản phẩm yêu thích</h1>
+            <p>Lưu lại những thiết kế bạn muốn sở hữu.</p>
+        </header>
+
+        <div class="wishlist-toolbar">
+            <span id="wishlist-result-count" aria-live="polite">Đang tải danh sách...</span>
+            <a href="shop.html">Tiếp tục mua sắm <span aria-hidden="true">→</span></a>
+        </div>
+
+        <section id="wishlist-grid" class="wishlist-grid" aria-label="Danh sách sản phẩm yêu thích">
+            <div class="wishlist-state">Đang tải danh sách yêu thích...</div>
+        </section>
+
+        <section id="wishlist-empty" class="wishlist-empty" hidden>
+            <span class="wishlist-empty-icon" aria-hidden="true">♡</span>
+            <h2>Danh sách đang còn trống</h2>
+            <p>Hãy khám phá bộ sưu tập CHERI và lưu lại những thiết kế bạn yêu thích.</p>
+            <a href="shop.html" class="wishlist-primary-link">KHÁM PHÁ SẢN PHẨM</a>
+        </section>
+    </main>
+
+    <div data-include="footer"></div>
+    <div id="wishlist-toast" class="wishlist-toast" role="status" aria-live="polite"></div>
+
+    <script src="../assets/js/auth.js"></script>
+</body>
+</html>
