@@ -297,72 +297,69 @@ function cheriStorageKey(baseKey) {
 }
 
 
-function updateHeaderCounts() {
+async function updateHeaderCounts() {
     const cartCount = document.getElementById("cart-count");
     const wishlistCount = document.getElementById("wishlist-count");
-
-    // Chưa có phiên đăng nhập thì không hiển thị số lượng cá nhân.
     const token = localStorage.getItem("cheri_auth_token");
     let user = null;
 
     try {
-        user = JSON.parse(
-            localStorage.getItem("cheri_auth_user") || "null"
-        );
+        user = JSON.parse(localStorage.getItem("cheri_auth_user") || "null");
     } catch {
         user = null;
     }
 
     if (!token || !user) {
         if (cartCount) cartCount.textContent = "";
-        if (wishlistCount) wishlistCount.textContent = "";
+        if (wishlistCount) {
+            const guestWishlist = readHeaderWishlistStorage();
+            wishlistCount.textContent = guestWishlist.length ? String(guestWishlist.length) : "";
+        }
         return;
     }
 
     try {
-        const cart = JSON.parse(
-            localStorage.getItem(cheriStorageKey("cheri_cart")) || "[]"
-        );
-
-        const wishlist = JSON.parse(
-            localStorage.getItem(cheriStorageKey("cheri_wishlist")) || "[]"
-        );
-
+        const cart = JSON.parse(localStorage.getItem(cheriStorageKey("cheri_cart")) || "[]");
         if (cartCount) {
             const totalQuantity = Array.isArray(cart)
                 ? cart.reduce((total, item) => {
-                    if (!item || typeof item !== "object") {
-                        return total;
-                    }
-
-                    const quantity = Number(
-                        item.quantity ?? item.qty ?? 0
-                    );
-
-                    return total + (
-                        Number.isFinite(quantity) && quantity > 0
-                            ? quantity
-                            : 0
-                    );
+                    if (!item || typeof item !== "object") return total;
+                    const quantity = Number(item.quantity ?? item.qty ?? 0);
+                    return total + (Number.isFinite(quantity) && quantity > 0 ? quantity : 0);
                 }, 0)
                 : 0;
-
-            cartCount.textContent =
-                totalQuantity > 0 ? String(totalQuantity) : "";
-        }
-
-        if (wishlistCount) {
-            const total = Array.isArray(wishlist)
-                ? wishlist.length
-                : 0;
-
-            wishlistCount.textContent = total > 0 ? String(total) : "";
+            cartCount.textContent = totalQuantity > 0 ? String(totalQuantity) : "";
         }
     } catch (error) {
-        console.warn("Dữ liệu giỏ hàng/yêu thích không hợp lệ:", error);
-
+        console.warn("Dữ liệu giỏ hàng không hợp lệ:", error);
         if (cartCount) cartCount.textContent = "";
-        if (wishlistCount) wishlistCount.textContent = "";
+    }
+
+    if (wishlistCount) {
+        try {
+            const response = await fetch("/api/wishlist", {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!response.ok) throw new Error(`Yêu cầu thất bại (${response.status})`);
+            const result = await response.json();
+            const items = Array.isArray(result.items) ? result.items : [];
+            wishlistCount.textContent = items.length ? String(items.length) : "";
+        } catch (error) {
+            console.warn("Không thể cập nhật số lượng yêu thích:", error);
+            wishlistCount.textContent = "";
+        }
+    }
+}
+
+function readHeaderWishlistStorage() {
+    try {
+        const key = typeof cheriStorageKey === "function"
+            ? cheriStorageKey("cheri_wishlist")
+            : "cheri_wishlist_guest";
+        const items = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(items) ? items : [];
+    } catch {
+        return [];
     }
 }
 
