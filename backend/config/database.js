@@ -18,7 +18,7 @@ const pool = mysql.createPool({
     timezone: "+07:00"
 });
 
-async function testDatabaseConnection() {
+async function verifyDatabaseConnection() {
     let connection;
 
     try {
@@ -38,5 +38,5 @@ async function testDatabaseConnection() {
 
 module.exports = {
     pool,
-    testDatabaseConnection
+    verifyDatabaseConnection
 };
