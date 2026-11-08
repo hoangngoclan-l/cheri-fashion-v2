@@ -686,3 +686,21 @@
         bottom: 12px;
     }
 }
+
+
+.shop-empty-retry {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    margin-top: 12px;
+    padding: 0 16px;
+    color: #fff;
+    background: #292326;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.shop-empty-retry:hover {
+    background: #a95170;
+}
