@@ -102,6 +102,7 @@ let currentProduct = null;
 let selectedSize = "";
 let selectedColor = "";
 let productQuantity = 1;
+let productWishlistIds = new Set();
 
 function productFormatPrice(price) {
     return new Intl.NumberFormat("vi-VN").format(price) + "đ";
@@ -545,32 +546,76 @@ function productAddToCart(buyNow) {
     }
 }
 
+async function productLoadWishlist() {
+    productWishlistIds = new Set();
+
+    if (window.CheriCommerceAPI?.isLoggedIn()) {
+        try {
+            const result = await window.CheriCommerceAPI.getWishlist();
+            const items = Array.isArray(result.items) ? result.items : [];
+            productWishlistIds = new Set(items.map(item => String(item.product_id ?? item.id)));
+            return;
+        } catch (error) {
+            console.warn("Không thể tải danh sách yêu thích:", error);
+            productShowToast("Chưa thể tải danh sách yêu thích từ tài khoản.");
+        }
+    }
+
+    const key = typeof cheriStorageKey === "function" ? cheriStorageKey("cheri_wishlist") : "cheri_wishlist_guest";
+    const saved = productReadStorage(key);
+    productWishlistIds = new Set(saved.map(item => String(
+        typeof item === "object" ? item.id ?? item.product_id : item
+    )));
+}
+
 function productUpdateWishlistButton() {
     const button = document.getElementById("product-wishlist-button");
     if (!button || !currentProduct) return;
 
-    const wishlist = productReadStorage("cheri_wishlist");
-    const isSaved = wishlist.some(item =>
-        String(item.id ?? item.product_id) === String(currentProduct.id)
-    );
-
+    const isSaved = productWishlistIds.has(String(currentProduct.id));
     button.classList.toggle("is-active", isSaved);
+    button.setAttribute("aria-pressed", String(isSaved));
     button.textContent = isSaved
         ? "♥ Đã có trong danh sách yêu thích"
         : "♡ Thêm vào danh sách yêu thích";
 }
 
-function productToggleWishlist() {
+async function productToggleWishlist() {
     if (!currentProduct) return;
 
-    try {
-        const wishlist = productReadStorage("cheri_wishlist");
-        const index = wishlist.findIndex(item =>
-            String(item.id ?? item.product_id) === String(currentProduct.id)
-        );
+    const productId = String(currentProduct.id);
+    const isSaved = productWishlistIds.has(productId);
 
-        if (index >= 0) {
-            wishlist.splice(index, 1);
+    if (window.CheriCommerceAPI?.isLoggedIn()) {
+        const numericId = Number(currentProduct.id);
+        if (!Number.isInteger(numericId) || numericId <= 0) {
+            productShowToast("Mã sản phẩm không hợp lệ.");
+            return;
+        }
+
+        try {
+            if (isSaved) {
+                await window.CheriCommerceAPI.removeFromWishlist(numericId);
+                productWishlistIds.delete(productId);
+                productShowToast("Đã xóa khỏi danh sách yêu thích.");
+            } else {
+                await window.CheriCommerceAPI.addToWishlist(numericId);
+                productWishlistIds.add(productId);
+                productShowToast("Đã thêm vào danh sách yêu thích.");
+            }
+        } catch (error) {
+            productShowToast(error.message || "Không thể cập nhật danh sách yêu thích.");
+            return;
+        }
+    } else {
+        const key = typeof cheriStorageKey === "function" ? cheriStorageKey("cheri_wishlist") : "cheri_wishlist_guest";
+        let wishlist = productReadStorage(key);
+
+        if (isSaved) {
+            wishlist = wishlist.filter(item =>
+                String(typeof item === "object" ? item.id ?? item.product_id : item) !== productId
+            );
+            productWishlistIds.delete(productId);
             productShowToast("Đã xóa khỏi danh sách yêu thích.");
         } else {
             wishlist.push({
@@ -579,16 +624,22 @@ function productToggleWishlist() {
                 price: currentProduct.price,
                 image: currentProduct.image
             });
+            productWishlistIds.add(productId);
             productShowToast("Đã thêm vào danh sách yêu thích.");
         }
 
-        productWriteStorage("cheri_wishlist", wishlist);
-        productDispatchUpdate("cheri:wishlist-updated");
-        productUpdateWishlistButton();
-    } catch {
-        productShowToast("Không thể cập nhật danh sách yêu thích.");
+        try {
+            productWriteStorage(key, wishlist);
+        } catch {
+            productShowToast("Không thể lưu danh sách yêu thích.");
+            return;
+        }
     }
+
+    productDispatchUpdate("cheri:wishlist-updated");
+    productUpdateWishlistButton();
 }
+
 
 function productRenderRelated(products) {
     const container = document.getElementById("product-related-grid");
@@ -675,6 +726,7 @@ async function productInit() {
     }
 
     currentProduct = found;
+    await productLoadWishlist();
     productRenderDetail(currentProduct);
     productRenderRelated(products);
 
