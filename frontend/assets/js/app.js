@@ -82,6 +82,10 @@ function setupHeaderInteractions() {
             if (shouldOpen) {
                 accountMenu && (accountMenu.hidden = true);
 
+                navigation?.classList.remove("is-open");
+                document.getElementById("mobile-menu-toggle")
+                    ?.setAttribute("aria-expanded", "false");
+
                 const accountButton = document.getElementById("account-toggle");
                 accountButton?.setAttribute("aria-expanded", "false");
 
@@ -122,6 +126,10 @@ function setupHeaderInteractions() {
                 searchPanel.hidden = true;
             }
 
+            navigation?.classList.remove("is-open");
+            document.getElementById("mobile-menu-toggle")
+                ?.setAttribute("aria-expanded", "false");
+
             document.getElementById("search-toggle")
                 ?.setAttribute("aria-expanded", "false");
 
@@ -152,6 +160,15 @@ function setupHeaderInteractions() {
         }
 
         // Bấm bên ngoài thì đóng các bảng đang mở.
+        if (
+            navigation?.classList.contains("is-open") &&
+            !event.target.closest("#main-navigation") &&
+            !event.target.closest("#mobile-menu-toggle")
+        ) {
+            navigation.classList.remove("is-open");
+            mobileToggle?.setAttribute("aria-expanded", "false");
+        }
+
         if (searchPanel && !searchPanel.hidden &&
             !event.target.closest("#header-search-panel")) {
             searchPanel.hidden = true;
