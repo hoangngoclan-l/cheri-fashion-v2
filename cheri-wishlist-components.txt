@@ -1,0 +1,691 @@
+﻿
+========== frontend/components/header.html ==========
+
+
+========== frontend/assets/js/product.js ==========
+
+const PRODUCT_SAMPLE_DATA = [
+    {
+        id: 1,
+        name: "Ão kiá»ƒu tá»‘i giáº£n",
+        category: "Ão ná»¯",
+        price: 320000,
+        oldPrice: 390000,
+        image: "../assets/images/products/ao-kieu.webp",
+        description:
+            "Thiáº¿t káº¿ tá»‘i giáº£n, dá»… phá»‘i cÃ¹ng quáº§n jeans, chÃ¢n vÃ¡y hoáº·c quáº§n Ã¢u. PhÃ¹ há»£p Ä‘á»ƒ máº·c Ä‘i há»c, Ä‘i lÃ m vÃ  dáº¡o phá»‘.",
+        sizes: ["S", "M", "L", "XL"],
+        colors: [
+            { name: "Tráº¯ng", code: "#f5f0e8" },
+            { name: "Äen", code: "#292629" },
+            { name: "Há»“ng nháº¡t", code: "#e8c6ce" }
+        ],
+        stock: 20
+    },
+    {
+        id: 2,
+        name: "VÃ¡y ná»¯ thanh lá»‹ch",
+        category: "VÃ¡y",
+        price: 490000,
+        oldPrice: 0,
+        image: "../assets/images/products/vay-thanh-lich.webp",
+        description:
+            "Thiáº¿t káº¿ ná»¯ tÃ­nh vá»›i Ä‘Æ°á»ng nÃ©t thanh lá»‹ch. Dá»… dÃ ng káº¿t há»£p cÃ¹ng giÃ y bá»‡t, giÃ y cao gÃ³t vÃ  phá»¥ kiá»‡n yÃªu thÃ­ch.",
+        sizes: ["S", "M", "L"],
+        colors: [
+            { name: "Kem", code: "#e8ddca" },
+            { name: "Äen", code: "#292629" }
+        ],
+        stock: 15
+    },
+    {
+        id: 3,
+        name: "Quáº§n á»‘ng rá»™ng hiá»‡n Ä‘áº¡i",
+        category: "Quáº§n",
+        price: 420000,
+        oldPrice: 0,
+        image: "../assets/images/products/quan-ong-rong.webp",
+        description:
+            "Phom quáº§n á»‘ng rá»™ng mang láº¡i váº» ngoÃ i hiá»‡n Ä‘áº¡i, dá»… phá»‘i vá»›i Ã¡o kiá»ƒu vÃ  Ã¡o thun.",
+        sizes: ["S", "M", "L", "XL"],
+        colors: [
+            { name: "Äen", code: "#292629" },
+            { name: "Be", code: "#c8b69f" }
+        ],
+        stock: 18
+    },
+    {
+        id: 4,
+        name: "ChÃ¢n vÃ¡y hiá»‡n Ä‘áº¡i",
+        category: "VÃ¡y",
+        price: 380000,
+        oldPrice: 0,
+        image: "../assets/images/products/chan-vay.webp",
+        description:
+            "ChÃ¢n vÃ¡y dá»… phá»‘i Ä‘á»“, phÃ¹ há»£p vá»›i nhiá»u phong cÃ¡ch tá»« nháº¹ nhÃ ng Ä‘áº¿n thanh lá»‹ch.",
+        sizes: ["S", "M", "L"],
+        colors: [
+            { name: "Äen", code: "#292629" },
+            { name: "Kem", code: "#e8ddca" }
+        ],
+        stock: 12
+    },
+    {
+        id: 5,
+        name: "Ão khoÃ¡c thanh lá»‹ch",
+        category: "Ão khoÃ¡c",
+        price: 550000,
+        oldPrice: 0,
+        image: "../assets/images/products/ao-khoac.webp",
+        description:
+            "Ão khoÃ¡c ná»¯ vá»›i thiáº¿t káº¿ hiá»‡n Ä‘áº¡i, dá»… káº¿t há»£p cÃ¹ng trang phá»¥c thÆ°á»ng ngÃ y.",
+        sizes: ["S", "M", "L", "XL"],
+        colors: [
+            { name: "Be", code: "#c8b69f" },
+            { name: "Äen", code: "#292629" }
+        ],
+        stock: 10
+    },
+    {
+        id: 6,
+        name: "Set Ä‘á»“ ná»¯ hiá»‡n Ä‘áº¡i",
+        category: "Set Ä‘á»“ ná»¯",
+        price: 620000,
+        oldPrice: 0,
+        image: "../assets/images/products/set-do-nu.webp",
+        description:
+            "Set Ä‘á»“ Ä‘á»“ng bá»™ giÃºp báº¡n tiáº¿t kiá»‡m thá»i gian phá»‘i trang phá»¥c mÃ  váº«n giá»¯ Ä‘Æ°á»£c váº» chá»‰n chu.",
+        sizes: ["S", "M", "L"],
+        colors: [
+            { name: "Kem", code: "#e8ddca" },
+            { name: "Há»“ng nháº¡t", code: "#e8c6ce" }
+        ],
+        stock: 8
+    }
+];
+
+let currentProduct = null;
+let selectedSize = "";
+let selectedColor = "";
+let productQuantity = 1;
+
+function productFormatPrice(price) {
+    return new Intl.NumberFormat("vi-VN").format(price) + "Ä‘";
+}
+
+function productEscapeHTML(value) {
+    return String(value ?? "").replace(/[&<>"']/g, character => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    })[character]);
+}
+
+function productGetId(product) {
+    return String(product.id ?? product.product_id ?? "");
+}
+
+function productNormalize(raw, index) {
+    const defaultProduct = PRODUCT_SAMPLE_DATA[index % PRODUCT_SAMPLE_DATA.length];
+
+    const rawPrice = Number(raw.price ?? raw.sale_price ?? defaultProduct.price);
+
+    let sizes = raw.sizes ?? raw.available_sizes ?? defaultProduct.sizes;
+    if (typeof sizes === "string") {
+        sizes = sizes.split(",").map(size => size.trim()).filter(Boolean);
+    }
+    if (!Array.isArray(sizes) || !sizes.length) {
+        sizes = defaultProduct.sizes;
+    }
+
+    let colors = raw.colors ?? raw.available_colors ?? defaultProduct.colors;
+    if (typeof colors === "string") {
+        colors = colors.split(",").map(name => ({
+            name: name.trim(),
+            code: "#d8c6cc"
+        })).filter(color => color.name);
+    }
+    if (!Array.isArray(colors) || !colors.length) {
+        colors = defaultProduct.colors;
+    }
+
+    return {
+        id: raw.id ?? raw.product_id ?? defaultProduct.id,
+        name: raw.name ?? raw.product_name ?? defaultProduct.name,
+        category: raw.category_name ?? raw.category ?? defaultProduct.category,
+        price: Number.isFinite(rawPrice) ? rawPrice : defaultProduct.price,
+        oldPrice: Number(raw.old_price ?? raw.original_price ?? 0),
+        image: raw.image ?? raw.image_url ?? defaultProduct.image,
+        description: raw.description ?? defaultProduct.description,
+        sizes,
+        colors,
+        stock: Math.max(0, Number(raw.stock ?? raw.quantity ?? defaultProduct.stock))
+    };
+}
+
+async function productLoadAll() {
+    try {
+        const response = await fetch("/api/products");
+
+        if (!response.ok) {
+            throw new Error("API sáº£n pháº©m chÆ°a sáºµn sÃ ng.");
+        }
+
+        const result = await response.json();
+        const data = Array.isArray(result)
+            ? result
+            : result.products ?? result.data ?? [];
+
+        if (Array.isArray(data) && data.length) {
+            return data.map(productNormalize);
+        }
+    } catch (error) {
+        console.warn("Äang dÃ¹ng dá»¯ liá»‡u máº«u:", error.message);
+    }
+
+    return PRODUCT_SAMPLE_DATA.map(product => ({ ...product }));
+}
+
+function productShowToast(message) {
+    const toast = document.getElementById("product-toast");
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+
+    window.clearTimeout(productShowToast.timeoutId);
+    productShowToast.timeoutId = window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+    }, 2600);
+}
+
+function productReadStorage(key) {
+    try {
+        const data = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(data) ? data : [];
+    } catch {
+        return [];
+    }
+}
+
+function productWriteStorage(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+
+function productDispatchUpdate(eventName) {
+    document.dispatchEvent(new CustomEvent(eventName));
+    window.dispatchEvent(new CustomEvent(eventName));
+}
+
+function productRenderDetail(product) {
+    const container = document.getElementById("product-detail-content");
+    const breadcrumb = document.getElementById("product-breadcrumb-name");
+    const description = document.getElementById("product-description");
+
+    if (!container) return;
+
+    if (breadcrumb) breadcrumb.textContent = product.name;
+    if (description) {
+        description.textContent = product.description || "ThÃ´ng tin sáº£n pháº©m Ä‘ang Ä‘Æ°á»£c cáº­p nháº­t.";
+    }
+
+    selectedSize = "";
+    selectedColor = "";
+    productQuantity = 1;
+
+    const discount = product.oldPrice > product.price
+        ? Math.round((1 - product.price / product.oldPrice) * 100)
+        : 0;
+
+    const stockText = product.stock > 0
+        ? `CÃ²n hÃ ng Â· ${product.stock} sáº£n pháº©m`
+        : "Sáº£n pháº©m táº¡m háº¿t hÃ ng";
+
+    container.innerHTML = `
+        <div class="product-detail-layout">
+            <div class="product-gallery">
+                <div class="product-main-image">
+                    <span class="product-gallery-note">CHERI SELECTION</span>
+                    <img
+                        id="product-main-photo"
+                        src="${productEscapeHTML(product.image)}"
+                        alt="${productEscapeHTML(product.name)}"
+                    >
+                </div>
+            </div>
+
+            <div class="product-info">
+                <span class="product-info-category">
+                    ${productEscapeHTML(product.category)}
+                </span>
+
+                <h1>${productEscapeHTML(product.name)}</h1>
+
+                <div class="product-price-row">
+                    <span class="product-current-price">
+                        ${productFormatPrice(product.price)}
+                    </span>
+
+                    ${product.oldPrice > product.price ? `
+                        <span class="product-old-price">
+                            ${productFormatPrice(product.oldPrice)}
+                        </span>
+                        <span class="product-discount">-${discount}%</span>
+                    ` : ""}
+                </div>
+
+                <p class="product-short-description">
+                    ${productEscapeHTML(product.description)}
+                </p>
+
+                <p class="product-stock ${product.stock <= 0 ? "is-out" : ""}">
+                    ${stockText}
+                </p>
+
+                <div class="product-option">
+                    <div class="product-option-heading">
+                        <span>KÃ­ch cá»¡</span>
+                        <span class="product-option-current" id="product-size-current">
+                            ChÆ°a chá»n
+                        </span>
+                    </div>
+
+                    <div class="product-size-list" id="product-size-list">
+                        ${product.sizes.map(size => `
+                            <button
+                                type="button"
+                                class="product-size-button"
+                                data-size="${productEscapeHTML(size)}"
+                                aria-pressed="false"
+                            >${productEscapeHTML(size)}</button>
+                        `).join("")}
+                    </div>
+                </div>
+
+                <div class="product-option">
+                    <div class="product-option-heading">
+                        <span>MÃ u sáº¯c</span>
+                        <span class="product-option-current" id="product-color-current">
+                            ChÆ°a chá»n
+                        </span>
+                    </div>
+
+                    <div class="product-color-list" id="product-color-list">
+                        ${product.colors.map(color => `
+                            <button
+                                type="button"
+                                class="product-color-button"
+                                data-color="${productEscapeHTML(color.name)}"
+                                aria-pressed="false"
+                            >
+                                <span
+                                    class="product-color-dot"
+                                    style="background:${/^#[0-9a-f]{3,8}$/i.test(color.code) ? color.code : "#d8c6cc"}"
+                                ></span>
+                                ${productEscapeHTML(color.name)}
+                            </button>
+                        `).join("")}
+                    </div>
+                </div>
+
+                <div class="product-quantity-row">
+                    <span class="product-quantity-label">Sá»‘ lÆ°á»£ng</span>
+
+                    <div class="product-quantity-control">
+                        <button type="button" id="product-quantity-minus"
+                                aria-label="Giáº£m sá»‘ lÆ°á»£ng">âˆ’</button>
+
+                        <input id="product-quantity"
+                               type="number"
+                               min="1"
+                               max="${product.stock}"
+                               value="1"
+                               inputmode="numeric"
+                               aria-label="Sá»‘ lÆ°á»£ng mua">
+
+                        <button type="button" id="product-quantity-plus"
+                                aria-label="TÄƒng sá»‘ lÆ°á»£ng">+</button>
+                    </div>
+                </div>
+
+                <div class="product-action-buttons">
+                    <button type="button"
+                            class="product-action-button product-add-cart"
+                            id="product-add-cart"
+                            ${product.stock <= 0 ? "disabled" : ""}>
+                        THÃŠM VÃ€O GIá»Ž
+                    </button>
+
+                    <button type="button"
+                            class="product-action-button product-buy-now"
+                            id="product-buy-now"
+                            ${product.stock <= 0 ? "disabled" : ""}>
+                        MUA NGAY
+                    </button>
+                </div>
+
+                <button type="button"
+                        class="product-wishlist-button"
+                        id="product-wishlist-button">
+                    â™¡ ThÃªm vÃ o danh sÃ¡ch yÃªu thÃ­ch
+                </button>
+
+                <div class="product-policy-list">
+                    <div class="product-policy-item">
+                        <span class="product-policy-icon">âœ§</span>
+                        <span>Thiáº¿t káº¿ hiá»‡n Ä‘áº¡i, dá»… phá»‘i Ä‘á»“ má»—i ngÃ y.</span>
+                    </div>
+                    <div class="product-policy-item">
+                        <span class="product-policy-icon">â™¡</span>
+                        <span>Kiá»ƒm tra ká»¹ thÃ´ng tin size vÃ  mÃ u trÆ°á»›c khi Ä‘áº·t hÃ ng.</span>
+                    </div>
+                    <div class="product-policy-item">
+                        <span class="product-policy-icon">â†—</span>
+                        <span>ThÃ´ng tin giao hÃ ng vÃ  Ä‘á»•i tráº£ sáº½ Ä‘Æ°á»£c xÃ¡c nháº­n á»Ÿ bÆ°á»›c thanh toÃ¡n.</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const photo = document.getElementById("product-main-photo");
+    photo.addEventListener("error", () => {
+        photo.style.display = "none";
+        const placeholder = document.createElement("div");
+        placeholder.className = "product-image-placeholder";
+        placeholder.textContent = "áº¢nh sáº£n pháº©m chÆ°a Ä‘Æ°á»£c thÃªm";
+        photo.parentElement.appendChild(placeholder);
+    }, { once: true });
+
+    productBindControls();
+    productUpdateWishlistButton();
+}
+
+function productBindControls() {
+    const sizeList = document.getElementById("product-size-list");
+    const colorList = document.getElementById("product-color-list");
+    const quantityInput = document.getElementById("product-quantity");
+
+    sizeList?.addEventListener("click", event => {
+        const button = event.target.closest("[data-size]");
+        if (!button || button.disabled) return;
+
+        selectedSize = button.dataset.size;
+
+        sizeList.querySelectorAll("[data-size]").forEach(item => {
+            const selected = item === button;
+            item.classList.toggle("is-selected", selected);
+            item.setAttribute("aria-pressed", String(selected));
+        });
+
+        document.getElementById("product-size-current").textContent = selectedSize;
+    });
+
+    colorList?.addEventListener("click", event => {
+        const button = event.target.closest("[data-color]");
+        if (!button) return;
+
+        selectedColor = button.dataset.color;
+
+        colorList.querySelectorAll("[data-color]").forEach(item => {
+            const selected = item === button;
+            item.classList.toggle("is-selected", selected);
+            item.setAttribute("aria-pressed", String(selected));
+        });
+
+        document.getElementById("product-color-current").textContent = selectedColor;
+    });
+
+    function setQuantity(value) {
+        const max = Math.max(1, currentProduct.stock);
+        productQuantity = Math.min(max, Math.max(1, Math.floor(Number(value) || 1)));
+
+        if (quantityInput) {
+            quantityInput.value = String(productQuantity);
+        }
+    }
+
+    document.getElementById("product-quantity-minus")?.addEventListener("click", () => {
+        setQuantity(productQuantity - 1);
+    });
+
+    document.getElementById("product-quantity-plus")?.addEventListener("click", () => {
+        setQuantity(productQuantity + 1);
+    });
+
+    quantityInput?.addEventListener("change", () => {
+        setQuantity(quantityInput.value);
+    });
+
+    document.getElementById("product-add-cart")?.addEventListener("click", () => {
+        productAddToCart(false);
+    });
+
+    document.getElementById("product-buy-now")?.addEventListener("click", () => {
+        productAddToCart(true);
+    });
+
+    document.getElementById("product-wishlist-button")?.addEventListener("click", () => {
+        productToggleWishlist();
+    });
+}
+
+function productValidateSelection() {
+    if (!selectedSize) {
+        productShowToast("Vui lÃ²ng chá»n kÃ­ch cá»¡ sáº£n pháº©m.");
+        return false;
+    }
+
+    if (!selectedColor) {
+        productShowToast("Vui lÃ²ng chá»n mÃ u sáº¯c sáº£n pháº©m.");
+        return false;
+    }
+
+    if (!currentProduct || currentProduct.stock <= 0) {
+        productShowToast("Sáº£n pháº©m hiá»‡n Ä‘Ã£ háº¿t hÃ ng.");
+        return false;
+    }
+
+    if (productQuantity < 1 || productQuantity > currentProduct.stock) {
+        productShowToast("Sá»‘ lÆ°á»£ng vÆ°á»£t quÃ¡ sá»‘ sáº£n pháº©m hiá»‡n cÃ³.");
+        return false;
+    }
+
+    return true;
+}
+
+function productBuildCartItem() {
+    return {
+        id: currentProduct.id,
+        name: currentProduct.name,
+        price: currentProduct.price,
+        image: currentProduct.image,
+        size: selectedSize,
+        color: selectedColor,
+        quantity: productQuantity
+    };
+}
+
+function productAddToCart(buyNow) {
+    if (!productValidateSelection()) return;
+
+    const item = productBuildCartItem();
+
+    if (buyNow) {
+        try {
+            localStorage.setItem("cheri_buy_now", JSON.stringify(item));
+            window.location.href = "checkout.html?mode=buy-now";
+        } catch {
+            productShowToast("KhÃ´ng thá»ƒ lÆ°u thÃ´ng tin sáº£n pháº©m. HÃ£y kiá»ƒm tra bá»™ nhá»› trÃ¬nh duyá»‡t.");
+        }
+        return;
+    }
+
+    try {
+        const cart = productReadStorage("cheri_cart");
+
+        const existingItem = cart.find(cartItem =>
+            String(cartItem.id ?? cartItem.product_id) === String(item.id) &&
+            String(cartItem.size ?? "") === item.size &&
+            String(cartItem.color ?? "") === item.color
+        );
+
+        if (existingItem) {
+            const oldQuantity = Number(existingItem.quantity ?? existingItem.qty ?? 0);
+            existingItem.quantity = Math.min(
+                currentProduct.stock,
+                oldQuantity + item.quantity
+            );
+            existingItem.qty = existingItem.quantity;
+        } else {
+            cart.push({ ...item, qty: item.quantity });
+        }
+
+        productWriteStorage("cheri_cart", cart);
+        productDispatchUpdate("cheri:cart-updated");
+        productShowToast("ÄÃ£ thÃªm sáº£n pháº©m vÃ o giá» hÃ ng!");
+    } catch {
+        productShowToast("KhÃ´ng thá»ƒ cáº­p nháº­t giá» hÃ ng. Vui lÃ²ng thá»­ láº¡i.");
+    }
+}
+
+function productUpdateWishlistButton() {
+    const button = document.getElementById("product-wishlist-button");
+    if (!button || !currentProduct) return;
+
+    const wishlist = productReadStorage("cheri_wishlist");
+    const isSaved = wishlist.some(item =>
+        String(item.id ?? item.product_id) === String(currentProduct.id)
+    );
+
+    button.classList.toggle("is-active", isSaved);
+    button.textContent = isSaved
+        ? "â™¥ ÄÃ£ cÃ³ trong danh sÃ¡ch yÃªu thÃ­ch"
+        : "â™¡ ThÃªm vÃ o danh sÃ¡ch yÃªu thÃ­ch";
+}
+
+function productToggleWishlist() {
+    if (!currentProduct) return;
+
+    try {
+        const wishlist = productReadStorage("cheri_wishlist");
+        const index = wishlist.findIndex(item =>
+            String(item.id ?? item.product_id) === String(currentProduct.id)
+        );
+
+        if (index >= 0) {
+            wishlist.splice(index, 1);
+            productShowToast("ÄÃ£ xÃ³a khá»i danh sÃ¡ch yÃªu thÃ­ch.");
+        } else {
+            wishlist.push({
+                id: currentProduct.id,
+                name: currentProduct.name,
+                price: currentProduct.price,
+                image: currentProduct.image
+            });
+            productShowToast("ÄÃ£ thÃªm vÃ o danh sÃ¡ch yÃªu thÃ­ch.");
+        }
+
+        productWriteStorage("cheri_wishlist", wishlist);
+        productDispatchUpdate("cheri:wishlist-updated");
+        productUpdateWishlistButton();
+    } catch {
+        productShowToast("KhÃ´ng thá»ƒ cáº­p nháº­t danh sÃ¡ch yÃªu thÃ­ch.");
+    }
+}
+
+function productRenderRelated(products) {
+    const container = document.getElementById("product-related-grid");
+    if (!container) return;
+
+    const related = products
+        .filter(product => String(product.id) !== String(currentProduct.id))
+        .slice(0, 4);
+
+    if (!related.length) {
+        container.innerHTML = `
+            <p class="product-loading">
+                ChÆ°a cÃ³ sáº£n pháº©m liÃªn quan.
+                <a href="shop.html">Xem táº¥t cáº£ sáº£n pháº©m</a>
+            </p>
+        `;
+        return;
+    }
+
+    container.innerHTML = related.map(product => `
+        <article class="product-related-card">
+            <a class="product-related-image"
+               href="product.html?id=${encodeURIComponent(String(product.id))}">
+                <img
+                    src="${productEscapeHTML(product.image)}"
+                    alt="${productEscapeHTML(product.name)}"
+                    loading="lazy"
+                >
+            </a>
+
+            <a class="product-related-name"
+               href="product.html?id=${encodeURIComponent(String(product.id))}">
+                ${productEscapeHTML(product.name)}
+            </a>
+
+            <div class="product-related-price">
+                ${productFormatPrice(product.price)}
+            </div>
+        </article>
+    `).join("");
+
+    container.querySelectorAll("img").forEach(image => {
+        image.addEventListener("error", () => {
+            image.style.visibility = "hidden";
+        }, { once: true });
+    });
+}
+
+async function productInit() {
+    const container = document.getElementById("product-detail-content");
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get("id");
+
+    if (!productId) {
+        if (container) {
+            container.innerHTML = `
+                <div class="product-error">
+                    ChÆ°a cÃ³ mÃ£ sáº£n pháº©m trong Ä‘Æ°á»ng dáº«n.<br>
+                    Vui lÃ²ng chá»n sáº£n pháº©m tá»« cá»­a hÃ ng.
+                    <p><a href="shop.html">Quay láº¡i trang sáº£n pháº©m â†’</a></p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    const products = await productLoadAll();
+
+    const found = products.find(product =>
+        String(product.id) === String(productId)
+    );
+
+    if (!found) {
+        if (container) {
+            container.innerHTML = `
+                <div class="product-error">
+                    KhÃ´ng tÃ¬m tháº¥y sáº£n pháº©m nÃ y.<br>
+                    Sáº£n pháº©m cÃ³ thá»ƒ Ä‘Ã£ bá»‹ xÃ³a hoáº·c mÃ£ sáº£n pháº©m khÃ´ng há»£p lá»‡.
+                    <p><a href="shop.html">Quay láº¡i cá»­a hÃ ng â†’</a></p>
+                </div>
+            `;
+        }
+        return;
+    }
+
+    currentProduct = found;
+    productRenderDetail(currentProduct);
+    productRenderRelated(products);
+
+    document.title = `${currentProduct.name} | CHERI FASHION`;
+}
+
+document.addEventListener("DOMContentLoaded", productInit);
+
