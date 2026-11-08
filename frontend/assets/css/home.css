@@ -544,3 +544,34 @@
     font-size: 12px;
     text-decoration: underline;
 }
+
+
+.category-placeholder {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: #765d67;
+    background: linear-gradient(145deg, #f8edf0, #ead8df);
+    text-align: center;
+}
+
+.category-placeholder span {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(18px, 2.4vw, 30px);
+    letter-spacing: 2px;
+}
+
+.category-placeholder small {
+    color: #8f7780;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+}
+
+.category-placeholder-set {
+    background: linear-gradient(145deg, #f4eee9, #e8d9cf);
+}
