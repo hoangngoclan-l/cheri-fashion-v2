@@ -101,11 +101,7 @@ function authBindLogin() {
 
             // Chỉ cho phép chuyển đến đường dẫn nội bộ tương đối.
             const safeNext =
-                next &&
-                !next.startsWith("//") &&
-                !next.includes("://") &&
-                !next.startsWith("/") &&
-                !next.includes("\\")
+                next && /^[a-zA-Z0-9_-]+\\.html(?:\\?[a-zA-Z0-9_%=&.-]*)?$/.test(next)
                     ? next
                     : "index.html";
 
