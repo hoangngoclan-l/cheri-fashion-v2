@@ -4,7 +4,8 @@
 const mysql = require("mysql2/promise");
 
 const pool = mysql.createPool({
-    host: process.env.DB_HOST || "localhost",
+    // Ưu tiên IPv4 loopback để tránh cấu hình localhost bị phân giải khác nhau trên Windows.
+    host: process.env.DB_HOST || "127.0.0.1",
     port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USER || "root",
     password: process.env.DB_PASSWORD || "",
@@ -29,7 +30,11 @@ async function verifyDatabaseConnection() {
         return true;
     } catch (error) {
         console.error("MySQL connection: FAILED");
+        console.error("Error code:", error.code || "UNKNOWN");
         console.error("Error:", error.message);
+        if (error.code === "ER_HOST_NOT_PRIVILEGED") {
+            console.error("MariaDB đã nhận kết nối nhưng từ chối host. Cần sửa quyền User@Host trong MariaDB; đổi DB_HOST đơn thuần không cấp quyền.");
+        }
         return false;
     } finally {
         if (connection) connection.release();

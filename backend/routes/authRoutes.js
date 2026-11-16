@@ -123,6 +123,14 @@ router.post("/register", async (req, res) => {
             });
         }
 
+        if (error.code === "ER_HOST_NOT_PRIVILEGED") {
+            return res.status(503).json({
+                success: false,
+                code: error.code,
+                message: "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản trong MariaDB; đây không phải lỗi email hoặc mật khẩu website."
+            });
+        }
+
         if (error.code === "ER_ACCESS_DENIED_ERROR") {
             return res.status(503).json({
                 success: false,
@@ -225,6 +233,14 @@ router.post("/login", async (req, res) => {
             user
         });
     } catch (error) {
+        if (error.code === "ER_HOST_NOT_PRIVILEGED") {
+            return res.status(503).json({
+                success: false,
+                code: error.code,
+                message: "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản trong MariaDB; đây không phải lỗi email hoặc mật khẩu website."
+            });
+        }
+
         if (["ECONNREFUSED", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(error.code)) {
             return res.status(503).json({
                 success: false,
