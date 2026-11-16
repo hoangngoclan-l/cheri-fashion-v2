@@ -31,7 +31,7 @@ npm run dev
 - Giỏ hàng: `/frontend/pages/cart.html`
 - Thanh toán: `/frontend/pages/checkout.html`
 - Danh sách yêu thích: `/frontend/pages/wishlist.html`
-- Kiểm tra backend: `/api/health`
+- Kiểm tra backend: `/api/health`\n- Kiểm tra kết nối MariaDB: `/api/health/db`
 - Kiểm tra danh sách sản phẩm: `/api/products`
 
 ## Cấu trúc
@@ -57,5 +57,5 @@ npm run dev
 
 - Không đưa file `.env`, mật khẩu database hoặc JWT secret lên GitHub.
 - Ảnh sản phẩm phải có đường dẫn hợp lệ trong trường `products.image` và tồn tại trong thư mục frontend.
-- Cần chạy website qua Express tại cổng 3000 để các đường dẫn `/api/...` hoạt động đúng.
+- Cần chạy website qua Express tại cổng 3000 để các đường dẫn `/api/...` hoạt động đúng.\n- Nếu `/api/health` trả `OK` nhưng `/api/health/db` trả `503` với mã `ER_HOST_NOT_PRIVILEGED`, Express vẫn chạy nhưng MariaDB đang từ chối quyền `User@Host`. Đây là lỗi quyền truy cập trong MariaDB, không thể sửa chỉ bằng HTML/CSS hoặc đăng ký lại tài khoản website. Không xóa thư mục `mysql/data`; cần sao lưu trước khi khôi phục quyền.
 - Các thao tác phụ thuộc MySQL cần được xác minh trên database thực tế; việc cập nhật mã nguồn trên GitHub không tự chạy migration trên máy cá nhân.
