@@ -123,6 +123,20 @@ router.post("/register", async (req, res) => {
             });
         }
 
+        if (error.code === "ER_ACCESS_DENIED_ERROR") {
+            return res.status(503).json({
+                success: false,
+                message: "MySQL từ chối kết nối. Hãy kiểm tra DB_USER và DB_PASSWORD trong file .env."
+            });
+        }
+
+        if (error.code === "ER_BAD_DB_ERROR") {
+            return res.status(503).json({
+                success: false,
+                message: "Không tìm thấy database cheri_fashion. Hãy tạo database theo database/schema.sql."
+            });
+        }
+
         if (["ER_NO_SUCH_TABLE", "ER_BAD_FIELD_ERROR"].includes(error.code)) {
             return res.status(500).json({
                 success: false,
