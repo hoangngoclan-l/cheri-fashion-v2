@@ -123,7 +123,15 @@ router.post("/register", async (req, res) => {
             });
         }
 
-        if (error.code === "ER_HOST_NOT_PRIVILEGED") {\n            return res.status(503).json({\n                success: false,\n                code: error.code,\n                message: "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản trong MariaDB; đây không phải lỗi email hoặc mật khẩu website."\n            });\n        }\n\n        if (error.code === "ER_ACCESS_DENIED_ERROR") {
+        if (error.code === "ER_HOST_NOT_PRIVILEGED") {
+            return res.status(503).json({
+                success: false,
+                code: error.code,
+                message: "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản trong MariaDB; đây không phải lỗi email hoặc mật khẩu website."
+            });
+        }
+
+        if (error.code === "ER_ACCESS_DENIED_ERROR") {
             return res.status(503).json({
                 success: false,
                 message: "MySQL từ chối kết nối. Hãy kiểm tra DB_USER và DB_PASSWORD trong file .env."
@@ -225,7 +233,15 @@ router.post("/login", async (req, res) => {
             user
         });
     } catch (error) {
-        if (error.code === "ER_HOST_NOT_PRIVILEGED") {\n            return res.status(503).json({\n                success: false,\n                code: error.code,\n                message: "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản trong MariaDB; đây không phải lỗi email hoặc mật khẩu website."\n            });\n        }\n\n        if (["ECONNREFUSED", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(error.code)) {
+        if (error.code === "ER_HOST_NOT_PRIVILEGED") {
+            return res.status(503).json({
+                success: false,
+                code: error.code,
+                message: "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản trong MariaDB; đây không phải lỗi email hoặc mật khẩu website."
+            });
+        }
+
+        if (["ECONNREFUSED", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(error.code)) {
             return res.status(503).json({
                 success: false,
                 message: "Không kết nối được MySQL. Hãy bật MySQL trong XAMPP và kiểm tra thông tin DB trong file .env."
