@@ -46,6 +46,30 @@ app.get("/", (req, res) => {
     res.redirect("/frontend/pages/index.html");
 });
 
+// API kiểm tra riêng kết nối cơ sở dữ liệu, không nhầm backend đang chạy với DB đã sẵn sàng.
+app.get("/api/health/db", async (req, res) => {
+    try {
+        await pool.query("SELECT 1 AS database_ready");
+        return res.status(200).json({
+            success: true,
+            status: "READY",
+            database: process.env.DB_NAME || "cheri_fashion",
+            message: "Kết nối MariaDB thành công."
+        });
+    } catch (error) {
+        console.error("Database health check failed:", error.code || "UNKNOWN", error.message);
+        const hostDenied = error.code === "ER_HOST_NOT_PRIVILEGED";
+        return res.status(503).json({
+            success: false,
+            status: "UNAVAILABLE",
+            code: error.code || "DATABASE_ERROR",
+            message: hostDenied
+                ? "MariaDB từ chối host kết nối. Cần kiểm tra quyền tài khoản User@Host trong MariaDB."
+                : "Không thể kết nối MariaDB. Kiểm tra dịch vụ, DB_HOST, DB_USER và DB_PASSWORD."
+        });
+    }
+});
+
 // API kiểm tra trạng thái backend.
 app.get("/api/health", (req, res) => {
     res.status(200).json({
@@ -88,11 +112,14 @@ app.get("/api/products", async (req, res) => {
             products
         });
     } catch (error) {
-        console.error("Lỗi lấy danh sách sản phẩm:", error.message);
+        console.error("Lỗi lấy danh sách sản phẩm:", error.code || "UNKNOWN", error.message);
 
-        return res.status(500).json({
+        return res.status(503).json({
             success: false,
-            message: "Không thể tải danh sách sản phẩm."
+            code: error.code || "DATABASE_ERROR",
+            message: error.code === "ER_HOST_NOT_PRIVILEGED"
+                ? "MariaDB từ chối quyền kết nối từ máy chủ. Kiểm tra quyền User@Host trong MariaDB."
+                : "Không thể tải sản phẩm vì cơ sở dữ liệu chưa sẵn sàng."
         });
     }
 });
@@ -145,11 +172,14 @@ app.get("/api/products/:id", async (req, res) => {
             product: products[0]
         });
     } catch (error) {
-        console.error("Lỗi lấy chi tiết sản phẩm:", error.message);
+        console.error("Lỗi lấy chi tiết sản phẩm:", error.code || "UNKNOWN", error.message);
 
-        return res.status(500).json({
+        return res.status(503).json({
             success: false,
-            message: "Không thể tải chi tiết sản phẩm."
+            code: error.code || "DATABASE_ERROR",
+            message: error.code === "ER_HOST_NOT_PRIVILEGED"
+                ? "MariaDB từ chối quyền kết nối từ máy chủ. Kiểm tra quyền User@Host trong MariaDB."
+                : "Không thể tải chi tiết sản phẩm vì cơ sở dữ liệu chưa sẵn sàng."
         });
     }
 });
