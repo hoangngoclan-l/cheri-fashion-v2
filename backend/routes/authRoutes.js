@@ -116,6 +116,20 @@ router.post("/register", async (req, res) => {
             });
         }
 
+        if (["ECONNREFUSED", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(error.code)) {
+            return res.status(503).json({
+                success: false,
+                message: "Không kết nối được MySQL. Hãy bật MySQL trong XAMPP và kiểm tra thông tin DB trong file .env."
+            });
+        }
+
+        if (["ER_NO_SUCH_TABLE", "ER_BAD_FIELD_ERROR"].includes(error.code)) {
+            return res.status(500).json({
+                success: false,
+                message: "Cấu trúc bảng tài khoản trong database chưa đúng. Hãy kiểm tra database/schema.sql."
+            });
+        }
+
         console.error("Lỗi đăng ký:", error);
 
         return res.status(500).json({
@@ -197,6 +211,20 @@ router.post("/login", async (req, res) => {
             user
         });
     } catch (error) {
+        if (["ECONNREFUSED", "ETIMEDOUT", "PROTOCOL_CONNECTION_LOST"].includes(error.code)) {
+            return res.status(503).json({
+                success: false,
+                message: "Không kết nối được MySQL. Hãy bật MySQL trong XAMPP và kiểm tra thông tin DB trong file .env."
+            });
+        }
+
+        if (["ER_NO_SUCH_TABLE", "ER_BAD_FIELD_ERROR"].includes(error.code)) {
+            return res.status(500).json({
+                success: false,
+                message: "Cấu trúc bảng tài khoản trong database chưa đúng. Hãy kiểm tra database/schema.sql."
+            });
+        }
+
         console.error("Lỗi đăng nhập:", error);
 
         return res.status(500).json({
