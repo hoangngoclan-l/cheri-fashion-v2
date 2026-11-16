@@ -32,6 +32,13 @@ function createToken(user) {
 // POST /api/auth/register
 router.post("/register", async (req, res) => {
     try {
+        if (!process.env.JWT_SECRET) {
+            return res.status(503).json({
+                success: false,
+                message: "Máy chủ chưa cấu hình JWT_SECRET. Hãy kiểm tra file .env và khởi động lại máy chủ."
+            });
+        }
+
         const fullName = String(req.body.fullName || "").trim();
         const email = normalizeEmail(req.body.email);
         const phone = String(req.body.phone || "").trim();
@@ -121,6 +128,13 @@ router.post("/register", async (req, res) => {
 // POST /api/auth/login
 router.post("/login", async (req, res) => {
     try {
+        if (!process.env.JWT_SECRET) {
+            return res.status(503).json({
+                success: false,
+                message: "Máy chủ chưa cấu hình JWT_SECRET. Hãy kiểm tra file .env và khởi động lại máy chủ."
+            });
+        }
+
         const email = normalizeEmail(req.body.email);
         const password = String(req.body.password || "");
 
