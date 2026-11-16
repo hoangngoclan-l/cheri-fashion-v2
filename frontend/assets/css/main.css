@@ -150,7 +150,7 @@ textarea:focus-visible {
 .brand-logo {
     flex-shrink: 0;
     color: var(--cheri-ink);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Manrope", "DM Sans", sans-serif;
     font-size: 36px;
     font-weight: 700;
     letter-spacing: -.07em;
@@ -1455,7 +1455,7 @@ th {
 
 .footer-brand {
     color: white !important;
-    font-family: Georgia, "Times New Roman", serif;
+    font-family: "Manrope", "DM Sans", sans-serif;
     font-size: 30px !important;
     font-weight: 700;
 }
