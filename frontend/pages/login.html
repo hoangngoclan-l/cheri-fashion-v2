@@ -3,13 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="0; url=account.html">
-    <title>Đăng nhập | CHERI FASHION</title>
+    <meta name="robots" content="noindex">
+    <title>Đăng nhập | CHERI.</title>
 </head>
 <body>
-    <p>Đang chuyển đến trang tài khoản. <a id="account-link" href="account.html">Tiếp tục</a></p>
+    <p>Đang chuyển đến trang đăng nhập CHERI.
+        <a id="account-link" href="account.html">Tiếp tục</a>
+    </p>
     <script>
-        const target = "account.html" + window.location.search;
+        const params = new URLSearchParams(window.location.search);
+        const next = params.get("next");
+        const target = next
+            ? "account.html?next=" + encodeURIComponent(next)
+            : "account.html";
+
         document.getElementById("account-link").href = target;
         window.location.replace(target);
     </script>
