@@ -56,18 +56,38 @@ function authSetLoading(form, loading) {
 }
 
 async function authSendRequest(endpoint, payload) {
-    const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-    });
+    let response;
 
-    const data = await response.json().catch(() => ({}));
+    try {
+        response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch {
+        throw new Error(
+            "Không thể kết nối máy chủ. Hãy kiểm tra MySQL và chạy lại npm run dev."
+        );
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    const data = contentType.includes("application/json")
+        ? await response.json().catch(() => ({}))
+        : {};
 
     if (!response.ok || !data.success) {
-        throw new Error(data.message || "Có lỗi xảy ra. Vui lòng thử lại.");
+        if (response.status === 404) {
+            throw new Error("Không tìm thấy API tài khoản. Hãy cập nhật mã nguồn và khởi động lại máy chủ.");
+        }
+
+        if (response.status >= 500 && !data.message) {
+            throw new Error("Máy chủ đang gặp lỗi. Kiểm tra thông báo lỗi trong cửa sổ npm run dev.");
+        }
+
+        throw new Error(data.message || "Không thể xử lý yêu cầu. Vui lòng thử lại.");
     }
 
     return data;
@@ -101,7 +121,7 @@ function authBindLogin() {
 
             // Chỉ cho phép chuyển đến đường dẫn nội bộ tương đối.
             const safeNext =
-                next && /^[a-zA-Z0-9_-]+\\.html(?:\\?[a-zA-Z0-9_%=&.-]*)?$/.test(next)
+                next && /^[a-zA-Z0-9_-]+\.html(?:\?[a-zA-Z0-9_%=&.-]*)?$/.test(next)
                     ? next
                     : "index.html";
 
