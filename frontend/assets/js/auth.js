@@ -121,9 +121,9 @@ function authBindLogin() {
 
             // Chỉ cho phép chuyển đến đường dẫn nội bộ tương đối.
             const safeNext =
-                next && /^[a-zA-Z0-9_-]+\.html(?:\?[a-zA-Z0-9_%=&.-]*)?$/.test(next)
+                next && /^(?:[a-zA-Z0-9_-]+|admin\/[a-zA-Z0-9_-]+)\.html(?:\?[a-zA-Z0-9_%=&.-]*)?$/.test(next)
                     ? next
-                    : "index.html";
+                    : (data.user.role === "admin" ? "admin/index.html" : "index.html");
 
             window.location.href = safeNext;
         } catch (error) {
@@ -219,6 +219,7 @@ function updateCheriAccountMenu() {
     const emailElement = get("account-menu-user-email");
     const orders = get("account-orders-link");
     const profile = get("account-profile-link");
+    const admin = get("account-admin-link");
     const login = get("account-login-link");
     const footer = get("account-menu-footer");
     
@@ -253,6 +254,7 @@ function updateCheriAccountMenu() {
 
     if (orders) orders.hidden = !loggedIn;
     if (profile) profile.hidden = !loggedIn;
+    if (admin) admin.hidden = !loggedIn || user?.role !== "admin";
     if (login) login.hidden = loggedIn;
 
     if (footer) footer.hidden = !loggedIn;
