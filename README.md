@@ -59,3 +59,28 @@ npm run dev
 - Ảnh sản phẩm phải có đường dẫn hợp lệ trong trường `products.image` và tồn tại trong thư mục frontend.
 - Cần chạy website qua Express tại cổng 3000 để các đường dẫn `/api/...` hoạt động đúng.
 - Các thao tác phụ thuộc MySQL cần được xác minh trên database thực tế; việc cập nhật mã nguồn trên GitHub không tự chạy migration trên máy cá nhân.
+
+
+## Khu vực quản trị CHERI
+
+- Trang quản trị: `/frontend/pages/admin/index.html`.
+- API quản trị: `/api/admin/*`; toàn bộ endpoint yêu cầu JWT hợp lệ và tài khoản có `users.role = 'admin'`.
+- Chức năng đã được dựng ở giai đoạn nền tảng: tổng quan doanh thu/đơn hàng, quản lý sản phẩm, cập nhật trạng thái đơn hàng và quản lý trạng thái khách hàng.
+- Không có tài khoản Admin mặc định và không cho phép tự đăng ký Admin từ giao diện khách hàng.
+
+### Cấp quyền Admin an toàn
+
+1. Đăng ký một tài khoản CHERI bình thường bằng email quản trị do chủ cửa hàng kiểm soát.
+2. Sao lưu database trước khi thay đổi quyền.
+3. Chạy câu lệnh dưới đây trong database `cheri_fashion`, thay email bằng địa chỉ vừa đăng ký:
+
+```sql
+UPDATE users
+SET role = 'admin'
+WHERE email = 'admin@your-domain.com'
+  AND role = 'customer';
+```
+
+4. Đăng xuất, đăng nhập lại để nhận phiên JWT mới có quyền Admin.
+
+Không tạo tài khoản quản trị bằng cách hard-code mật khẩu trong mã nguồn hoặc seed công khai. Việc cập nhật mã trên GitHub không tự động thay đổi database đang chạy trên máy cá nhân.
