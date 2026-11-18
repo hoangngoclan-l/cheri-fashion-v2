@@ -132,6 +132,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     order_id BIGINT UNSIGNED NOT NULL,
     variant_id BIGINT UNSIGNED NULL,
+    product_id BIGINT UNSIGNED NULL,
     product_name VARCHAR(220) NOT NULL,
     size VARCHAR(40) NOT NULL,
     color_name VARCHAR(80) NOT NULL,
@@ -141,6 +142,8 @@ CREATE TABLE IF NOT EXISTS order_items (
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_order_items_order (order_id),
+    KEY idx_order_items_product (product_id),
+    CONSTRAINT fk_order_items_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL ON UPDATE CASCADE,
     CONSTRAINT fk_order_items_order
         FOREIGN KEY (order_id) REFERENCES orders(id)
         ON DELETE CASCADE ON UPDATE CASCADE
