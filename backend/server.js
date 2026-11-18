@@ -1,6 +1,7 @@
 "use strict";
 
 require("dotenv").config();
+
 const {
     pool,
     verifyDatabaseConnection
@@ -14,7 +15,6 @@ const path = require("path");
 const authRoutes = require("./routes/authRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const profileRoutes = require("./routes/profileRoutes");
-
 const cartRoutes = require("./routes/cartRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
 
@@ -31,7 +31,6 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// Phục vụ giao diện website.
 const frontendPath = path.join(__dirname, "..", "frontend");
 
 app.use(
@@ -41,12 +40,10 @@ app.use(
     })
 );
 
-// Trang chủ mặc định.
 app.get("/", (req, res) => {
     res.redirect("/frontend/pages/index.html");
 });
 
-// API kiểm tra trạng thái backend.
 app.get("/api/health", (req, res) => {
     res.status(200).json({
         success: true,
@@ -56,11 +53,27 @@ app.get("/api/health", (req, res) => {
     });
 });
 
-/* =========================================
-   API SẢN PHẨM - LẤY DỮ LIỆU TỪ MYSQL
-   ========================================= */
+// Health check riêng cho database, không làm lộ thông tin kết nối.
+app.get("/api/health/db", async (req, res) => {
+    try {
+        const [rows] = await pool.query("SELECT 1 AS database_connected");
 
-// Lấy danh sách sản phẩm đang hoạt động.
+        return res.status(200).json({
+            success: true,
+            databaseConnected: rows[0].database_connected === 1,
+            database: process.env.DB_NAME || "cheri_fashion"
+        });
+    } catch (error) {
+        console.error("Database health check failed:", error.message);
+
+        return res.status(503).json({
+            success: false,
+            databaseConnected: false,
+            message: "Không thể kết nối cơ sở dữ liệu."
+        });
+    }
+});
+
 app.get("/api/products", async (req, res) => {
     try {
         const [products] = await pool.execute(`
@@ -97,7 +110,6 @@ app.get("/api/products", async (req, res) => {
     }
 });
 
-// Lấy chi tiết một sản phẩm theo ID MySQL.
 app.get("/api/products/:id", async (req, res) => {
     const productId = Number(req.params.id);
 
@@ -154,16 +166,12 @@ app.get("/api/products/:id", async (req, res) => {
     }
 });
 
-
-// API đặt hàng mới
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/profile", profileRoutes);
-
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 
-// Xử lý những API chưa được khai báo.
 app.use("/api", (req, res) => {
     res.status(404).json({
         success: false,
@@ -171,17 +179,28 @@ app.use("/api", (req, res) => {
     });
 });
 
-// Khởi động máy chủ.
 async function startServer() {
+    // Vẫn khởi động HTTP để health endpoint có thể báo DB đang lỗi.
     await verifyDatabaseConnection();
 
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log("------------------------------------");
         console.log("CHERI Fashion server is running");
-        console.log(`Website: http://localhost:${PORT}`);
-        console.log(`Health:  http://localhost:${PORT}/api/health`);
+        console.log(`Website:  http://localhost:${PORT}`);
+        console.log(`Health:   http://localhost:${PORT}/api/health`);
+        console.log(`Database: http://localhost:${PORT}/api/health/db`);
         console.log(`Products: http://localhost:${PORT}/api/products`);
         console.log("------------------------------------");
+    });
+
+    server.on("error", (error) => {
+        if (error.code === "EADDRINUSE") {
+            console.error(`Port ${PORT} is already in use. Change PORT in .env or stop the conflicting process.`);
+        } else {
+            console.error("Server startup error:", error.message);
+        }
+
+        process.exitCode = 1;
     });
 }
 
