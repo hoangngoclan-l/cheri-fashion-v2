@@ -203,15 +203,17 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
         `INSERT INTO order_items (
           order_id,
           variant_id,
+          product_id,
           product_name,
           size,
           color_name,
           unit_price,
           quantity,
           line_total
-        ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?)`,
+        ) VALUES (?, NULL, ?, ?, ?, ?, ?, ?, ?)`,
         [
           orderId,
+          item.productId,
           item.productName,
           item.size,
           item.colorName,
