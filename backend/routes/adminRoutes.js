@@ -197,8 +197,9 @@ router.patch("/orders/:id/status", async (req, res) => {
         return res.status(400).json({ success: false, message: "Đơn hàng hoặc trạng thái không hợp lệ." });
     }
 
-    const connection = await pool.getConnection();
+    let connection;
     try {
+        connection = await pool.getConnection();
         await connection.beginTransaction();
         const [orders] = await connection.execute(
             "SELECT id, order_status FROM orders WHERE id = ? FOR UPDATE", [id]
@@ -260,10 +261,14 @@ router.patch("/orders/:id/status", async (req, res) => {
                 : "Đã cập nhật trạng thái đơn hàng."
         });
     } catch (error) {
-        await connection.rollback();
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback đơn hàng thất bại:", rollbackError);
+            }
+        }
         return sendError(res, error, "Không thể cập nhật trạng thái đơn hàng.");
     } finally {
-        connection.release();
+        connection?.release();
     }
 });
 
