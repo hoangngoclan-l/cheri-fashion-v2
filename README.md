@@ -84,3 +84,9 @@ WHERE email = 'admin@your-domain.com'
 4. Đăng xuất, đăng nhập lại để nhận phiên JWT mới có quyền Admin.
 
 Không tạo tài khoản quản trị bằng cách hard-code mật khẩu trong mã nguồn hoặc seed công khai. Việc cập nhật mã trên GitHub không tự động thay đổi database đang chạy trên máy cá nhân.
+
+### Nâng cấp dữ liệu đơn hàng để hỗ trợ hoàn kho
+
+Với database đã được tạo từ phiên bản schema cũ, chạy **một lần** file `database/migrations/2026-11-18-order-item-product-link.sql` trước khi sử dụng backend mới. Schema mới cũng đã có cột `order_items.product_id` cho các cài đặt mới.
+
+Lưu ý: các đơn hàng được tạo trước migration không có liên kết sản phẩm trong từng dòng đơn. Admin API chủ động từ chối hủy những đơn cũ này để tránh hoàn kho sai; cần đối soát tồn kho thủ công trước khi xử lý.
