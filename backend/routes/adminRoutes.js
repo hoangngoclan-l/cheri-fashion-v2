@@ -196,12 +196,74 @@ router.patch("/orders/:id/status", async (req, res) => {
     if (!id || !ORDER_STATUSES.includes(status)) {
         return res.status(400).json({ success: false, message: "Đơn hàng hoặc trạng thái không hợp lệ." });
     }
+
+    const connection = await pool.getConnection();
     try {
-        const [result] = await pool.execute("UPDATE orders SET order_status=? WHERE id=?", [status, id]);
-        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
-        return res.json({ success: true, message: "Đã cập nhật trạng thái đơn hàng." });
+        await connection.beginTransaction();
+        const [orders] = await connection.execute(
+            "SELECT id, order_status FROM orders WHERE id = ? FOR UPDATE", [id]
+        );
+        if (!orders.length) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        }
+
+        const current = orders[0].order_status;
+        if (current === status) {
+            await connection.commit();
+            return res.json({ success: true, message: "Đơn hàng đã ở trạng thái này." });
+        }
+
+        const transitions = {
+            pending: ["confirmed", "cancelled"],
+            confirmed: ["processing", "cancelled"],
+            processing: ["shipping", "cancelled"],
+            shipping: ["delivered"],
+            delivered: ["returned"],
+            cancelled: [],
+            returned: []
+        };
+        if (!transitions[current]?.includes(status)) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                message: `Không thể chuyển đơn từ "${current}" sang "${status}".`
+            });
+        }
+
+        if (status === "cancelled") {
+            const [items] = await connection.execute(
+                "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
+                [id]
+            );
+            if (!items.length || items.some(item => item.product_id == null)) {
+                await connection.rollback();
+                return res.status(409).json({
+                    success: false,
+                    message: "Đơn hàng cũ thiếu liên kết sản phẩm để hoàn kho an toàn. Cần đối soát tồn kho thủ công trước khi hủy."
+                });
+            }
+            for (const item of items) {
+                await connection.execute(
+                    "UPDATE products SET stock = stock + ? WHERE id = ?",
+                    [item.quantity, item.product_id]
+                );
+            }
+        }
+
+        await connection.execute("UPDATE orders SET order_status = ? WHERE id = ?", [status, id]);
+        await connection.commit();
+        return res.json({
+            success: true,
+            message: status === "cancelled"
+                ? "Đã hủy đơn và hoàn lại tồn kho."
+                : "Đã cập nhật trạng thái đơn hàng."
+        });
     } catch (error) {
+        await connection.rollback();
         return sendError(res, error, "Không thể cập nhật trạng thái đơn hàng.");
+    } finally {
+        connection.release();
     }
 });
 
