@@ -63,7 +63,7 @@ router.get("/categories", async (req, res) => {
         );
         return res.json({ success: true, categories });
     } catch (error) {
-        return sendError(res, error, "Kh?ng th? t?i danh s?ch danh m?c.");
+        return sendError(res, error, "Không thể tải danh sách danh mục.");
     }
 });
 
@@ -118,7 +118,7 @@ router.post("/products", async (req, res) => {
         if (!categoryRow) {
             return res.status(400).json({
                 success: false,
-                message: "Danh m?c kh?ng t?n t?i ho?c ?? ng?ng ho?t ??ng."
+                message: "Danh mục không tồn tại hoặc đã ngừng hoạt động."
             });
         }
 
@@ -168,7 +168,7 @@ router.put("/products/:id", async (req, res) => {
         if (!categoryRow) {
             return res.status(400).json({
                 success: false,
-                message: "Danh m?c kh?ng t?n t?i ho?c ?? ng?ng ho?t ??ng."
+                message: "Danh mục không tồn tại hoặc đã ngừng hoạt động."
             });
         }
 

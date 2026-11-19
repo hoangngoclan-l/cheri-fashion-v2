@@ -76,13 +76,13 @@
 
         const select = $("product-category");
         select.innerHTML =
-            '<option value="">Ch?n danh m?c</option>' +
+            '<option value="">Chọn danh mục</option>' +
             categories.map(category =>
                 `<option value="${category.id}">${escapeHtml(category.name)}</option>`
             ).join("");
 
         if (!categories.length) {
-            throw new Error("Ch?a c? danh m?c ?ang ho?t ??ng.");
+            throw new Error("Chưa có danh mục đang hoạt động.");
         }
     }
 
@@ -107,7 +107,7 @@
 
         form.reset();
         form.elements.id.value = product?.id || "";
-        $("product-dialog-title").textContent = product ? "C?p nh?t s?n ph?m" : "Th?m s?n ph?m";
+        $("product-dialog-title").textContent = product ? "Cập nhật sản phẩm" : "Thêm sản phẩm";
 
         ["product_code","name","price","old_price","stock","status","image","description"].forEach(key => {
             form.elements[key].value =
