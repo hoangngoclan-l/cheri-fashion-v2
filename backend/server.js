@@ -47,12 +47,23 @@ app.get("/", (req, res) => {
     res.redirect("/frontend/pages/index.html");
 });
 
-// API kiểm tra trạng thái backend.
+// API kiểm tra trạng thái backend (không phụ thuộc database).
 app.get("/api/health", (req, res) => {
     res.status(200).json({
         success: true,
         message: "CHERI Fashion API is running",
         status: "OK",
+        timestamp: new Date().toISOString()
+    });
+});
+
+// API kiểm tra riêng kết nối database.
+app.get("/api/health/db", async (req, res) => {
+    const connected = await verifyDatabaseConnection();
+    return res.status(connected ? 200 : 503).json({
+        success: connected,
+        database: connected ? "connected" : "unavailable",
+        message: connected ? "Database connection is healthy." : "Không thể kết nối MySQL. Kiểm tra dịch vụ và cấu hình DB.",
         timestamp: new Date().toISOString()
     });
 });
@@ -173,18 +184,26 @@ app.use("/api", (req, res) => {
     });
 });
 
-// Khởi động máy chủ.
+// Khởi động HTTP server kể cả khi database tạm thời chưa sẵn sàng.
+// Các API cần MySQL sẽ trả lỗi phù hợp; /api/health/db cho biết trạng thái database.
 async function startServer() {
-    await verifyDatabaseConnection();
+    const databaseReady = await verifyDatabaseConnection();
 
     app.listen(PORT, () => {
         console.log("------------------------------------");
         console.log("CHERI Fashion server is running");
-        console.log(`Website: http://localhost:${PORT}`);
-        console.log(`Health:  http://localhost:${PORT}/api/health`);
-        console.log(`Products: http://localhost:${PORT}/api/products`);
+        console.log(`Website:   http://localhost:${PORT}`);
+        console.log(`Health:    http://localhost:${PORT}/api/health`);
+        console.log(`Database:  http://localhost:${PORT}/api/health/db`);
+        console.log(`Products:  http://localhost:${PORT}/api/products`);
+        if (!databaseReady) {
+            console.warn("MySQL is unavailable. Database-backed features are not ready.");
+        }
         console.log("------------------------------------");
     });
 }
 
-startServer();
+startServer().catch(error => {
+    console.error("Không thể khởi động CHERI Fashion server:", error);
+    process.exitCode = 1;
+});
