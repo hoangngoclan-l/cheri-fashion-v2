@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(adminMiddleware);
 
 const ORDER_STATUSES = ["pending", "confirmed", "processing", "shipping", "delivered", "cancelled", "returned"];
-const PRODUCT_STATUSES = ["active", "inactive", "out_of_stock"];
+const PRODUCT_STATUSES = ["active", "inactive"];
 
 function positiveId(value) {
     const id = Number(value);
@@ -55,6 +55,18 @@ router.get("/dashboard", async (req, res) => {
     }
 });
 
+// GET /api/admin/categories
+router.get("/categories", async (req, res) => {
+    try {
+        const [categories] = await pool.execute(
+            "SELECT id, name, slug FROM categories WHERE is_active = 1 ORDER BY name ASC"
+        );
+        return res.json({ success: true, categories });
+    } catch (error) {
+        return sendError(res, error, "Kh?ng th? t?i danh s?ch danh m?c.");
+    }
+});
+
 // GET /api/admin/products
 router.get("/products", async (req, res) => {
     try {
@@ -85,28 +97,40 @@ router.post("/products", async (req, res) => {
     const body = req.body || {};
     const productCode = String(body.product_code || "").trim();
     const name = String(body.name || "").trim();
-    const category = String(body.category || "").trim();
-    const categorySlug = String(body.category_slug || "").trim();
+    const categoryId = positiveId(body.category_id);
     const price = Number(body.price);
     const oldPrice = Number(body.old_price || 0);
     const stock = Number(body.stock || 0);
-    if (!productCode || !name || !category || !categorySlug ||
-        productCode.length > 60 || name.length > 220 ||
+    const status = String(body.status || "active");
+    if (!productCode || !name || !categoryId ||
+        productCode.length > 50 || name.length > 220 ||
         !Number.isFinite(price) || price < 0 ||
         !Number.isFinite(oldPrice) || oldPrice < 0 ||
-        !Number.isSafeInteger(stock) || stock < 0) {
+        !Number.isSafeInteger(stock) || stock < 0 || !PRODUCT_STATUSES.includes(status)) {
         return res.status(400).json({ success: false, message: "Dữ liệu sản phẩm không hợp lệ." });
     }
     try {
+        const [[categoryRow]] = await pool.execute(
+            "SELECT id, name, slug FROM categories WHERE id = ? AND is_active = 1 LIMIT 1",
+            [categoryId]
+        );
+
+        if (!categoryRow) {
+            return res.status(400).json({
+                success: false,
+                message: "Danh m?c kh?ng t?n t?i ho?c ?? ng?ng ho?t ??ng."
+            });
+        }
+
         const [result] = await pool.execute(`
             INSERT INTO products (product_code, name, category, category_slug, price, old_price, image, description, is_new, is_sale, stock, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
-            productCode, name, category, categorySlug, price, oldPrice,
+            productCode, name, categoryRow.name, categoryRow.slug, price, oldPrice,
             String(body.image || "").trim() || null,
             String(body.description || "").trim() || null,
             body.is_new ? 1 : 0, body.is_sale ? 1 : 0, stock,
-            PRODUCT_STATUSES.includes(body.status) ? body.status : "active"
+            status
         ]);
         return res.status(201).json({ success: true, productId: result.insertId, message: "Đã tạo sản phẩm." });
     } catch (error) {
@@ -124,23 +148,35 @@ router.put("/products/:id", async (req, res) => {
     if (!id) return res.status(400).json({ success: false, message: "ID sản phẩm không hợp lệ." });
     const productCode = String(body.product_code || "").trim();
     const name = String(body.name || "").trim();
-    const category = String(body.category || "").trim();
-    const categorySlug = String(body.category_slug || "").trim();
+    const categoryId = positiveId(body.category_id);
     const price = Number(body.price);
     const oldPrice = Number(body.old_price || 0);
     const stock = Number(body.stock);
     const status = String(body.status || "active");
-    if (!productCode || !name || !category || !categorySlug ||
+    if (!productCode || !name || !categoryId ||
+        productCode.length > 50 || name.length > 220 ||
         !Number.isFinite(price) || price < 0 || !Number.isFinite(oldPrice) || oldPrice < 0 ||
         !Number.isSafeInteger(stock) || stock < 0 || !PRODUCT_STATUSES.includes(status)) {
         return res.status(400).json({ success: false, message: "Dữ liệu cập nhật sản phẩm không hợp lệ." });
     }
     try {
+        const [[categoryRow]] = await pool.execute(
+            "SELECT id, name, slug FROM categories WHERE id = ? AND is_active = 1 LIMIT 1",
+            [categoryId]
+        );
+
+        if (!categoryRow) {
+            return res.status(400).json({
+                success: false,
+                message: "Danh m?c kh?ng t?n t?i ho?c ?? ng?ng ho?t ??ng."
+            });
+        }
+
         const [result] = await pool.execute(`
             UPDATE products SET product_code=?, name=?, category=?, category_slug=?, price=?, old_price=?,
                 image=?, description=?, is_new=?, is_sale=?, stock=?, status=? WHERE id=?
         `, [
-            productCode, name, category, categorySlug, price, oldPrice,
+            productCode, name, categoryRow.name, categoryRow.slug, price, oldPrice,
             String(body.image || "").trim() || null,
             String(body.description || "").trim() || null,
             body.is_new ? 1 : 0, body.is_sale ? 1 : 0, stock, status, id

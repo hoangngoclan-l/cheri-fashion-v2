@@ -10,6 +10,7 @@
     const statusText = value => ({pending:"Chờ xác nhận",confirmed:"Đã xác nhận",processing:"Đang xử lý",shipping:"Đang giao",delivered:"Đã giao",cancelled:"Đã hủy",returned:"Hoàn trả",active:"Đang hoạt động",inactive:"Ngừng hoạt động",blocked:"Đã khóa",out_of_stock:"Hết hàng"})[value] || value || "—";
     const statusClass = value => ["delivered","active"].includes(value) ? "success" : ["pending","confirmed","processing","shipping"].includes(value) ? "warn" : ["cancelled","returned","blocked","inactive","out_of_stock"].includes(value) ? "danger" : "";
     let products = [];
+    let categories = [];
 
     function alertMessage(message, error = false) {
         const box = $("admin-alert");
@@ -69,23 +70,60 @@
         } catch (error) { alertMessage(error.message, true); }
     }
 
+    async function loadCategories() {
+        const data = await api("/categories");
+        categories = data.categories || [];
+
+        const select = $("product-category");
+        select.innerHTML =
+            '<option value="">Ch?n danh m?c</option>' +
+            categories.map(category =>
+                `<option value="${category.id}">${escapeHtml(category.name)}</option>`
+            ).join("");
+
+        if (!categories.length) {
+            throw new Error("Ch?a c? danh m?c ?ang ho?t ??ng.");
+        }
+    }
+
     async function loadProducts() {
         try {
             const q = encodeURIComponent($("product-search").value.trim());
             const data = await api("/products?q=" + q);
             products = data.products || [];
-            $("products-table").innerHTML = products.length ? products.map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.product_code)}</td><td>${escapeHtml(p.category)}</td><td>${money(p.price)}</td><td>${p.stock}</td><td><span class="pill ${statusClass(p.status)}">${statusText(p.status)}</span></td><td><button class="table-action" data-edit-product="${p.id}">Sửa</button><button class="table-action" data-delete-product="${p.id}">Ngừng bán</button></td></tr>`).join("") : '<tr><td colspan="7" class="empty-row">Không tìm thấy sản phẩm.</td></tr>';
+            $("products-table").innerHTML = products.length ? products.map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.product_code)}</td><td>${escapeHtml(p.category)}</td><td>${money(p.price)}</td><td>${p.stock}</td><td><span class="pill ${statusClass(p.status === "active" && Number(p.stock) <= 0 ? "out_of_stock" : p.status)}">${statusText(p.status === "active" && Number(p.stock) <= 0 ? "out_of_stock" : p.status)}</span></td><td><button class="table-action" data-edit-product="${p.id}">Sửa</button><button class="table-action" data-delete-product="${p.id}">Ngừng bán</button></td></tr>`).join("") : '<tr><td colspan="7" class="empty-row">Không tìm thấy sản phẩm.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
 
-    function openProduct(product = null) {
+    async function openProduct(product = null) {
         const form = $("product-form");
+
+        try {
+            await loadCategories();
+        } catch (error) {
+            alertMessage(error.message, true);
+            return;
+        }
+
         form.reset();
         form.elements.id.value = product?.id || "";
-        $("product-dialog-title").textContent = product ? "Cập nhật sản phẩm" : "Thêm sản phẩm";
-        ["product_code","name","category","category_slug","price","old_price","stock","status","image","description"].forEach(key => { form.elements[key].value = product?.[key] ?? (key === "status" ? "active" : key === "old_price" || key === "stock" ? 0 : ""); });
+        $("product-dialog-title").textContent = product ? "C?p nh?t s?n ph?m" : "Th?m s?n ph?m";
+
+        ["product_code","name","price","old_price","stock","status","image","description"].forEach(key => {
+            form.elements[key].value =
+                product?.[key] ??
+                (key === "status" ? "active" :
+                key === "old_price" || key === "stock" ? 0 : "");
+        });
+
+        const selectedCategory = categories.find(
+            category => category.slug === product?.category_slug
+        );
+
+        form.elements.category_id.value = selectedCategory ? String(selectedCategory.id) : "";
         form.elements.is_new.checked = Boolean(product?.is_new);
         form.elements.is_sale.checked = Boolean(product?.is_sale);
+
         $("product-dialog").showModal();
     }
 

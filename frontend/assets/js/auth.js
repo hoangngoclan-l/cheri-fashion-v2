@@ -32,6 +32,9 @@ const CHERI_AUTH = {
     }
 };
 
+// Cho phep cac trang khac truy cap bo quan ly phien dang nhap.
+window.CHERI_AUTH = CHERI_AUTH;
+
 function authShowMessage(message, type = "error") {
     const box = document.getElementById("auth-message");
     if (!box) return;
