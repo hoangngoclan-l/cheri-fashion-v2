@@ -262,6 +262,7 @@ async function loadShopWishlist() {
         } catch (error) {
             console.warn("Không thể tải danh sách yêu thích:", error);
             showShopToast("Chưa thể tải danh sách yêu thích từ tài khoản.");
+            return;
         }
     }
 

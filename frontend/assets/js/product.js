@@ -481,6 +481,7 @@ async function productLoadWishlist() {
         } catch (error) {
             console.warn("Không thể tải danh sách yêu thích:", error);
             productShowToast("Chưa thể tải danh sách yêu thích từ tài khoản.");
+            return;
         }
     }
 
