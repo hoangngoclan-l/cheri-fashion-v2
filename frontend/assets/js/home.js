@@ -1,5 +1,9 @@
 "use strict";
 
+let homeProducts = [];
+let homeWishlistIds = new Set();
+let homeWishlistUnavailable = false;
+
 function homeFormatPrice(value) {
     return new Intl.NumberFormat("vi-VN").format(Number(value) || 0) + "đ";
 }
@@ -55,7 +59,9 @@ async function homeLoadProducts() {
 }
 
 function homeRenderProduct(product) {
-    const id = encodeURIComponent(String(product.id));
+    const rawId = String(product.id);
+    const id = encodeURIComponent(rawId);
+    const dataId = homeEscapeHTML(rawId);
     const name = homeEscapeHTML(product.name);
     const category = homeEscapeHTML(product.category);
     const image = homeEscapeHTML(product.image || "../assets/images/products/ao-kieu.webp");
@@ -74,6 +80,15 @@ function homeRenderProduct(product) {
                 ${badge}
                 <img src="${image}" alt="${name}" loading="lazy">
             </a>
+            <button
+                type="button"
+                class="home-wishlist-button"
+                data-home-action="wishlist"
+                data-product-id="\${dataId}"
+                aria-label="Thêm \${name} vào danh sách yêu thích"
+                aria-pressed="false"
+                title="Thêm vào yêu thích"
+            >♡</button>
             <div class="home-product-info">
                 <span class="home-product-category">${category}</span>
                 <a class="home-product-name" href="product.html?id=${id}">${name}</a>
@@ -84,6 +99,137 @@ function homeRenderProduct(product) {
             </div>
         </article>
     `;
+}
+
+function homeReadWishlistStorage() {
+    try {
+        const key = typeof cheriStorageKey === "function"
+            ? cheriStorageKey("cheri_wishlist")
+            : "cheri_wishlist_guest";
+        const rows = JSON.parse(localStorage.getItem(key) || "[]");
+        return Array.isArray(rows) ? rows : [];
+    } catch {
+        return [];
+    }
+}
+
+async function homeLoadWishlist() {
+    homeWishlistIds = new Set();
+    homeWishlistUnavailable = false;
+
+    if (window.CheriCommerceAPI?.isLoggedIn()) {
+        try {
+            const result = await window.CheriCommerceAPI.getWishlist();
+            const items = Array.isArray(result.items) ? result.items : [];
+            homeWishlistIds = new Set(items.map(item => String(item.product_id ?? item.id)));
+            return;
+        } catch (error) {
+            homeWishlistUnavailable = true;
+            console.warn("Không thể tải yêu thích trên trang chủ:", error);
+            homeShowToast("Chưa thể tải danh sách yêu thích từ tài khoản. Vui lòng tải lại trang.");
+            return;
+        }
+    }
+
+    homeWishlistIds = new Set(homeReadWishlistStorage().map(item =>
+        String(typeof item === "object" ? item.id ?? item.product_id : item)
+    ));
+}
+
+function homeUpdateWishlistButtons() {
+    document.querySelectorAll(".home-wishlist-button").forEach(button => {
+        const active = homeWishlistIds.has(button.dataset.productId);
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", String(active));
+        button.textContent = active ? "♥" : "♡";
+        button.title = active ? "Xóa khỏi yêu thích" : "Thêm vào yêu thích";
+        button.disabled = homeWishlistUnavailable;
+    });
+}
+
+function homeShowToast(message) {
+    const toast = document.getElementById("home-toast");
+    if (!toast) {
+        console.warn(message);
+        return;
+    }
+    toast.textContent = message;
+    toast.classList.add("is-visible");
+    window.clearTimeout(homeShowToast.timer);
+    homeShowToast.timer = window.setTimeout(() => {
+        toast.classList.remove("is-visible");
+    }, 2800);
+}
+
+async function homeToggleWishlist(product) {
+    const productId = String(product.id);
+    const alreadySaved = homeWishlistIds.has(productId);
+
+    if (window.CheriCommerceAPI?.isLoggedIn()) {
+        if (homeWishlistUnavailable) {
+            homeShowToast("Danh sách yêu thích chưa tải được. Vui lòng tải lại trang.");
+            return;
+        }
+        const numericId = Number(product.id);
+        if (!Number.isSafeInteger(numericId) || numericId <= 0) {
+            homeShowToast("Mã sản phẩm không hợp lệ.");
+            return;
+        }
+        try {
+            if (alreadySaved) {
+                await window.CheriCommerceAPI.removeFromWishlist(numericId);
+                homeWishlistIds.delete(productId);
+                homeShowToast("Đã xóa khỏi danh sách yêu thích.");
+            } else {
+                await window.CheriCommerceAPI.addToWishlist(numericId);
+                homeWishlistIds.add(productId);
+                homeShowToast("Đã thêm vào danh sách yêu thích.");
+            }
+        } catch (error) {
+            homeShowToast(error.message || "Không thể cập nhật danh sách yêu thích.");
+            return;
+        }
+    } else {
+        const key = typeof cheriStorageKey === "function"
+            ? cheriStorageKey("cheri_wishlist")
+            : "cheri_wishlist_guest";
+        let wishlist = homeReadWishlistStorage();
+        if (alreadySaved) {
+            wishlist = wishlist.filter(item =>
+                String(typeof item === "object" ? item.id ?? item.product_id : item) !== productId
+            );
+            homeWishlistIds.delete(productId);
+            homeShowToast("Đã xóa khỏi danh sách yêu thích.");
+        } else {
+            wishlist.push({
+                id: product.id,
+                name: product.name,
+                category: product.category,
+                price: product.price,
+                image: product.image
+            });
+            homeWishlistIds.add(productId);
+            homeShowToast("Đã thêm vào danh sách yêu thích.");
+        }
+        try {
+            localStorage.setItem(key, JSON.stringify(wishlist));
+        } catch {
+            homeShowToast("Không thể lưu danh sách yêu thích.");
+            return;
+        }
+    }
+
+    homeUpdateWishlistButtons();
+    document.dispatchEvent(new CustomEvent("cheri:wishlist-updated"));
+}
+
+function homeBindWishlistEvents() {
+    document.addEventListener("click", event => {
+        const button = event.target.closest('[data-home-action="wishlist"]');
+        if (!button || button.disabled) return;
+        const product = homeProducts.find(item => String(item.id) === button.dataset.productId);
+        if (product) homeToggleWishlist(product);
+    });
 }
 
 function homeRenderMessage(container, message, withLink = false) {
@@ -118,6 +264,8 @@ async function homeInitProducts() {
 
     try {
         const products = await homeLoadProducts();
+        homeProducts = products;
+        await homeLoadWishlist();
 
         if (!products.length) {
             homeRenderMessage(featuredContainer, "CHERI đang cập nhật sản phẩm mới.", true);
@@ -134,6 +282,7 @@ async function homeInitProducts() {
         newContainer.innerHTML = newProducts.map(homeRenderProduct).join("");
         homeBindImageFallback(featuredContainer);
         homeBindImageFallback(newContainer);
+        homeUpdateWishlistButtons();
     } catch (error) {
         console.error("Không thể tải sản phẩm trang chủ:", error);
         homeRenderMessage(featuredContainer, error.message || "Không thể tải sản phẩm.", true);
@@ -190,6 +339,7 @@ function homeInitPopup() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+    homeBindWishlistEvents();
     homeInitProducts();
     homeInitPopup();
 });
