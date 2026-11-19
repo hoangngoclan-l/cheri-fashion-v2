@@ -84,8 +84,8 @@ function homeRenderProduct(product) {
                 type="button"
                 class="home-wishlist-button"
                 data-home-action="wishlist"
-                data-product-id="\${dataId}"
-                aria-label="Thêm \${name} vào danh sách yêu thích"
+                data-product-id="${dataId}"
+                aria-label="Thêm ${name} vào danh sách yêu thích"
                 aria-pressed="false"
                 title="Thêm vào yêu thích"
             >♡</button>
