@@ -26,7 +26,7 @@ router.get("/dashboard", async (req, res) => {
         const [[sales]] = await pool.execute(`
             SELECT
                 COUNT(*) AS total_orders,
-                COALESCE(SUM(CASE WHEN order_status <> 'cancelled' THEN total_amount ELSE 0 END), 0) AS gross_revenue,
+                COALESCE(SUM(CASE WHEN order_status NOT IN ('cancelled', 'returned') THEN total_amount ELSE 0 END), 0) AS gross_revenue,
                 SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) AS pending_orders,
                 SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) AS today_orders
             FROM orders
@@ -42,8 +42,11 @@ router.get("/dashboard", async (req, res) => {
             FROM orders ORDER BY created_at DESC, id DESC LIMIT 8
         `);
         const [topProducts] = await pool.execute(`
-            SELECT product_name, SUM(quantity) AS units_sold, SUM(line_total) AS revenue
-            FROM order_items GROUP BY product_name
+            SELECT oi.product_name, SUM(oi.quantity) AS units_sold, SUM(oi.line_total) AS revenue
+            FROM order_items oi
+            INNER JOIN orders o ON o.id = oi.order_id
+            WHERE o.order_status NOT IN ('cancelled', 'returned')
+            GROUP BY oi.product_name
             ORDER BY units_sold DESC LIMIT 5
         `);
         return res.json({ success: true, metrics: { ...sales, ...counts }, recentOrders, topProducts });
@@ -142,7 +145,12 @@ router.put("/products/:id", async (req, res) => {
             String(body.description || "").trim() || null,
             body.is_new ? 1 : 0, body.is_sale ? 1 : 0, stock, status, id
         ]);
-        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+        if (!result.affectedRows) {
+            const [existing] = await pool.execute("SELECT id FROM products WHERE id = ? LIMIT 1", [id]);
+            if (!existing.length) {
+                return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+            }
+        }
         return res.json({ success: true, message: "Đã cập nhật sản phẩm." });
     } catch (error) {
         if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Mã sản phẩm đã được sử dụng." });
@@ -156,7 +164,12 @@ router.delete("/products/:id", async (req, res) => {
     if (!id) return res.status(400).json({ success: false, message: "ID sản phẩm không hợp lệ." });
     try {
         const [result] = await pool.execute("UPDATE products SET status='inactive' WHERE id=?", [id]);
-        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+        if (!result.affectedRows) {
+            const [existing] = await pool.execute("SELECT id FROM products WHERE id = ? LIMIT 1", [id]);
+            if (!existing.length) {
+                return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+            }
+        }
         return res.json({ success: true, message: "Đã ngừng kinh doanh sản phẩm." });
     } catch (error) {
         return sendError(res, error, "Không thể ngừng kinh doanh sản phẩm.");
@@ -304,7 +317,15 @@ router.patch("/customers/:id/status", async (req, res) => {
             "UPDATE users SET status=? WHERE id=? AND role='customer'",
             [status, id]
         );
-        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng." });
+        if (!result.affectedRows) {
+            const [existing] = await pool.execute(
+                "SELECT id FROM users WHERE id = ? AND role = 'customer' LIMIT 1",
+                [id]
+            );
+            if (!existing.length) {
+                return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng." });
+            }
+        }
         return res.json({ success: true, message: "Đã cập nhật trạng thái khách hàng." });
     } catch (error) {
         return sendError(res, error, "Không thể cập nhật khách hàng.");
