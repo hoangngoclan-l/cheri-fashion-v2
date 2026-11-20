@@ -28,7 +28,7 @@ const CHERI_AUTH = {
     logout() {
         localStorage.removeItem(this.tokenKey);
         localStorage.removeItem(this.userKey);
-        window.location.href = "account.html";
+        window.location.href = "/frontend/pages/account.html";
     }
 };
 
