@@ -199,6 +199,17 @@ router.put("/products/:id", async (req, res) => {
                 return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
             }
         }
+
+        // Với sản phẩm đã quản lý tồn kho bằng biến thể, stock tổng luôn
+        // phải được tính từ các biến thể đang hoạt động, không lấy từ form sản phẩm.
+        const [[variantSummary]] = await pool.execute(
+            "SELECT COUNT(*) AS total FROM product_variants WHERE product_id = ?",
+            [id]
+        );
+        if (Number(variantSummary.total) > 0) {
+            await syncProductStock(id);
+        }
+
         return res.json({ success: true, message: "Đã cập nhật sản phẩm." });
     } catch (error) {
         if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Mã sản phẩm đã được sử dụng." });
