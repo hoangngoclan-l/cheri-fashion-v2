@@ -279,6 +279,14 @@ async function loadShopWishlist() {
 
 function normalizeShopProduct(product, index = 0) {
     const price = Number(product.price ?? product.salePrice ?? 0);
+    const variants = Array.isArray(product.variants)
+        ? product.variants.map(variant => ({
+            id: Number(variant.id), size: String(variant.size || "").trim(),
+            colorName: String(variant.color_name || "").trim(),
+            price: variant.price == null ? null : Number(variant.price),
+            stock: Math.max(0, Number(variant.stock) || 0), status: String(variant.status || "")
+        })).filter(variant => Number.isSafeInteger(variant.id) && variant.id > 0 && variant.status === "active")
+        : [];
 
     function normalizeOptions(raw, fallback) {
         let items = [];
@@ -322,20 +330,20 @@ function normalizeShopProduct(product, index = 0) {
         product.sizeOptions ??
         product.size_options;
 
-    const colors = normalizeOptions(
-        rawColors ?? (product.color ? [product.color] : []),
-        ["Màu mặc định"]
-    );
+    const colors = variants.length
+        ? [...new Set(variants.map(variant => variant.colorName).filter(Boolean))]
+        : normalizeOptions(rawColors ?? (product.color ? [product.color] : []), []);
 
-    const sizes = normalizeOptions(
-        rawSizes ?? (product.size ? [product.size] : []),
-        ["S", "M", "L", "XL"]
-    );
+    const sizes = variants.length
+        ? [...new Set(variants.map(variant => variant.size).filter(Boolean))]
+        : normalizeOptions(rawSizes ?? (product.size ? [product.size] : []), []);
 
-    const stock = Number(product.stock ?? product.quantity ?? 0);
+    const rawStock = Number(product.stock ?? product.quantity ?? 0);
+    const stock = variants.length ? variants.reduce((sum, variant) => sum + variant.stock, 0) : rawStock;
 
     return {
         ...product,
+        variants,
         id: String(product.id ?? product.product_id ?? `product-${index}`),
         name: String(product.name ?? product.title ?? "Sản phẩm CHERI"),
         category: String(product.category ?? product.category_name ?? ""),
@@ -824,9 +832,7 @@ function openShopVariantModal(product, action) {
         new Option("Chọn kích thước", "")
     );
 
-    const sizes = Array.isArray(product.sizes) && product.sizes.length
-        ? product.sizes
-        : ["S", "M", "L", "XL", "Free size"];
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
 
     sizes.forEach(size => {
         const value = String(size).trim();
@@ -841,9 +847,7 @@ function openShopVariantModal(product, action) {
         new Option("Chọn màu sắc", "")
     );
 
-    const colors = Array.isArray(product.colors) && product.colors.length
-        ? product.colors
-        : ["Trắng", "Đen"];
+    const colors = Array.isArray(product.colors) ? product.colors : [];
 
     colors.forEach(color => {
         const value = String(color).trim();
@@ -856,6 +860,13 @@ function openShopVariantModal(product, action) {
     quantityInput.value = "1";
     quantityInput.min = "1";
     quantityInput.max = String(Math.max(1, Math.min(99, product.stock)));
+    sizeSelect.disabled = product.variants.length === 0;
+    colorSelect.disabled = product.variants.length === 0;
+    confirmButton.disabled = product.variants.length === 0;
+    if (!product.variants.length) {
+        error.textContent = "Sản phẩm chưa có biến thể được cấu hình. Vui lòng quay lại sau.";
+        error.hidden = false;
+    }
 
     error.hidden = true;
     error.textContent = "";
@@ -932,10 +943,20 @@ async function confirmShopVariant(event) {
         return;
     }
 
+    const selectedVariant = product.variants.find(variant =>
+        variant.size === size && variant.colorName === color
+    );
+
+    if (!selectedVariant || selectedVariant.stock < 1) {
+        error.textContent = "Biến thể đã chọn không tồn tại hoặc đã hết hàng.";
+        error.hidden = false;
+        return;
+    }
+
     if (
         !Number.isInteger(quantity) ||
         quantity < 1 ||
-        quantity > product.stock
+        quantity > selectedVariant.stock
     ) {
         error.textContent =
             `Số lượng phải từ 1 đến ${product.stock}.`;
@@ -948,11 +969,13 @@ async function confirmShopVariant(event) {
         id: product.id,
         name: product.name,
         category: product.category,
-        price: product.price,
+        price: selectedVariant.price ?? product.price,
         image: product.image,
+        variantId: selectedVariant.id,
         size,
         color,
-        quantity
+        quantity,
+        stock: selectedVariant.stock
     };
 
     // Giữ nguyên luồng mua ngay.
