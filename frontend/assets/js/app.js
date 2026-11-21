@@ -320,15 +320,10 @@ async function updateHeaderCounts() {
     const token = localStorage.getItem("cheri_auth_token");
 
     if (!token) {
-        const guestCart = readHeaderStorage("cheri_cart");
-        const guestWishlist = readHeaderStorage("cheri_wishlist");
-        const quantity = guestCart.reduce((total, item) => {
-            const value = Number(item?.quantity ?? item?.qty ?? 1);
-            return total + (Number.isFinite(value) && value > 0 ? value : 0);
-        }, 0);
-
-        if (cartCount) cartCount.textContent = quantity ? String(quantity) : "";
-        if (wishlistCount) wishlistCount.textContent = guestWishlist.length ? String(guestWishlist.length) : "";
+        // Không hiển thị số lượng giỏ hàng/yêu thích khi chưa đăng nhập.
+        // Không xóa dữ liệu khách đang lưu trong localStorage.
+        if (cartCount) cartCount.textContent = "";
+        if (wishlistCount) wishlistCount.textContent = "";
         return;
     }
 

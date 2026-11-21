@@ -5,78 +5,7 @@
    Desktop + tablet + mobile
    ========================================================= */
 
-/* 1. RESET AND GLOBAL */
-
-:root {
-    --cheri-pink: #bd3f73;
-    --cheri-pink-dark: #96305a;
-    --cheri-pink-light: #fbe7ef;
-    --cheri-pink-soft: #fff6f9;
-    --cheri-white: #ffffff;
-    --cheri-ink: #30262c;
-    --cheri-muted: #81777d;
-    --cheri-line: #eadde3;
-    --cheri-cream: #fffaf8;
-    --cheri-shadow: 0 12px 36px rgba(75, 43, 56, 0.10);
-    --cheri-radius: 12px;
-    --cheri-max-width: 1240px;
-}
-
-* {
-    box-sizing: border-box;
-}
-
-html {
-    scroll-behavior: smooth;
-}
-
-body {
-    margin: 0;
-    color: var(--cheri-ink);
-    background: var(--cheri-white);
-    font-family: "DM Sans", Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-img {
-    display: block;
-    max-width: 100%;
-}
-
-button,
-input,
-select,
-textarea {
-    font: inherit;
-}
-
-button {
-    cursor: pointer;
-}
-
-a {
-    color: inherit;
-    text-decoration: none;
-}
-
-button:focus-visible,
-a:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-    outline: 2px solid var(--cheri-pink);
-    outline-offset: 3px;
-}
-
-[hidden] {
-    display: none !important;
-}
-
-.container {
-    width: min(var(--cheri-max-width), calc(100% - 40px));
-    margin-inline: auto;
-}
+/* Reset, design tokens and container are defined in base.css. */
 
 .section {
     padding: 64px 0;
