@@ -38,6 +38,31 @@
         </main>
     </div>
     <dialog id="product-dialog" class="product-dialog"><form id="product-form"><div class="dialog-heading"><div><p class="eyebrow">PRODUCT MANAGEMENT</p><h2 id="product-dialog-title">Thêm sản phẩm</h2></div><button type="button" class="icon-close" id="close-product-dialog" aria-label="Đóng">×</button></div><input type="hidden" name="id"><div class="form-grid"><label>Mã sản phẩm<input name="product_code" required maxlength="50"></label><label>Tên sản phẩm<input name="name" required maxlength="220"></label><label>Danh mục<select id="product-category" name="category_id" required><option value="">Chọn danh mục</option></select></label><label>Giá bán<input name="price" type="number" min="0" step="1000" required></label><label>Giá gốc<input name="old_price" type="number" min="0" step="1000" value="0"></label><label>Tồn kho<input name="stock" type="number" min="0" step="1" value="0" required></label><label>Trạng thái<select name="status"><option value="active">Đang bán</option><option value="inactive">Ngừng bán</option></select></label><label class="wide">Ảnh sản phẩm (đường dẫn)<input name="image" placeholder="/frontend/assets/images/products/..."></label><label class="wide">Mô tả<textarea name="description" rows="3"></textarea></label><label class="check"><input name="is_new" type="checkbox"> Hàng mới</label><label class="check"><input name="is_sale" type="checkbox"> Đang khuyến mãi</label></div><div class="dialog-actions"><button type="button" class="button button-light" id="cancel-product">Hủy</button><button type="submit" class="button button-primary">Lưu sản phẩm</button></div></form></dialog>
+
+    <dialog id="variant-dialog" class="product-dialog variant-dialog">
+        <div class="variant-dialog-content">
+            <div class="dialog-heading">
+                <div><p class="eyebrow">PRODUCT VARIANTS</p><h2 id="variant-dialog-title">Quản lý biến thể</h2><p id="variant-product-summary" class="variant-summary"></p></div>
+                <button type="button" class="icon-close" id="close-variant-dialog" aria-label="Đóng">×</button>
+            </div>
+            <div class="variant-list-heading"><strong>Danh sách biến thể</strong><span id="variant-count" class="pill">0 biến thể</span></div>
+            <div class="table-scroll variant-table-wrap"><table><thead><tr><th>SKU</th><th>Size</th><th>Màu</th><th>Giá riêng</th><th>Tồn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="variants-table"><tr><td colspan="7" class="empty-row">Đang tải...</td></tr></tbody></table></div>
+            <form id="variant-form" class="variant-form">
+                <input type="hidden" name="product_id"><input type="hidden" name="variant_id">
+                <div class="variant-form-heading"><strong>Thông tin biến thể</strong><button type="button" class="button button-light" id="add-variant">Làm mới biểu mẫu</button></div>
+                <div class="form-grid">
+                    <label>SKU<input name="sku" required maxlength="80" placeholder="Nhập SKU thực tế"></label>
+                    <label>Kích thước<input name="size" maxlength="40" placeholder="Ví dụ: S, M, L"></label>
+                    <label>Tên màu<input name="color_name" maxlength="80" placeholder="Tên màu thực tế"></label>
+                    <label>Mã màu<input name="color_code" maxlength="20" placeholder="#FFFFFF"></label>
+                    <label>Giá riêng (để trống dùng giá sản phẩm)<input name="price" type="number" min="0" step="1000"></label>
+                    <label>Tồn kho<input name="stock" type="number" min="0" step="1" value="0" required></label>
+                    <label>Trạng thái<select name="status"><option value="active">Đang hoạt động</option><option value="inactive">Ngừng hoạt động</option></select></label>
+                </div>
+                <div class="dialog-actions"><button type="button" class="button button-light" id="cancel-variant-dialog">Đóng</button><button type="submit" class="button button-primary"><span id="variant-save-label">Thêm biến thể</span></button></div>
+            </form>
+        </div>
+    </dialog>
     <script src="../../assets/js/auth.js"></script><script src="../../assets/js/admin.js"></script>
 </body>
 </html>
