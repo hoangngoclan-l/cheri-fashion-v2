@@ -3,6 +3,7 @@
 let currentProduct = null;
 let selectedSize = "";
 let selectedColor = "";
+let selectedVariantId = null;
 let productQuantity = 1;
 let productWishlistIds = new Set();
 
@@ -25,35 +26,31 @@ function productGetId(product) {
 }
 
 function productNormalize(raw) {
-    let sizes = raw.sizes ?? raw.available_sizes ?? ["S", "M", "L", "XL"];
-    if (typeof sizes === "string") {
-        sizes = sizes.split(",").map(size => size.trim()).filter(Boolean);
-    }
-    if (!Array.isArray(sizes) || !sizes.length) {
-        sizes = ["S", "M", "L", "XL"];
-    }
+    const variants = Array.isArray(raw.variants)
+        ? raw.variants.map(variant => ({
+            id: Number(variant.id),
+            size: String(variant.size || "").trim(),
+            colorName: String(variant.color_name || "").trim(),
+            colorCode: String(variant.color_code || "").trim(),
+            price: variant.price == null ? null : Number(variant.price),
+            stock: Math.max(0, Number(variant.stock) || 0),
+            status: String(variant.status || "")
+        })).filter(variant =>
+            Number.isSafeInteger(variant.id) && variant.id > 0 &&
+            variant.status === "active"
+        )
+        : [];
 
-    let colors = raw.colors ?? raw.available_colors ?? [];
-    if (typeof colors === "string") {
-        colors = colors.split(",").map(name => ({
-            name: name.trim(),
-            code: "#d8c6cc"
-        })).filter(color => color.name);
-    }
-    if (!Array.isArray(colors) || !colors.length) {
-        colors = [{ name: "Màu mặc định", code: "#d8c6cc" }];
-    } else {
-        colors = colors.map(color => typeof color === "string"
-            ? { name: color, code: "#d8c6cc" }
-            : {
-                name: String(color.name ?? color.label ?? "Màu mặc định"),
-                code: String(color.code ?? "#d8c6cc")
-            }
-        );
-    }
+    const sizes = [...new Set(variants.map(variant => variant.size).filter(Boolean))];
+    const colors = [...new Map(variants.filter(variant => variant.colorName).map(variant => [
+        variant.colorName,
+        { name: variant.colorName, code: variant.colorCode || "#d8c6cc" }
+    ])).values()];
 
     const price = Number(raw.price ?? raw.sale_price ?? 0);
-    const stock = Number(raw.stock ?? raw.quantity ?? 0);
+    const stock = variants.length
+        ? variants.reduce((sum, variant) => sum + variant.stock, 0)
+        : Number(raw.stock ?? raw.quantity ?? 0);
 
     return {
         id: raw.id ?? raw.product_id,
@@ -63,6 +60,7 @@ function productNormalize(raw) {
         oldPrice: Number(raw.old_price ?? raw.original_price ?? 0),
         image: String(raw.image ?? raw.image_url ?? "../assets/images/products/ao-kieu.webp"),
         description: String(raw.description ?? "Thông tin sản phẩm đang được cập nhật."),
+        variants,
         sizes,
         colors,
         stock: Number.isFinite(stock) && stock > 0 ? Math.floor(stock) : 0
@@ -141,6 +139,7 @@ function productRenderDetail(product) {
 
     selectedSize = "";
     selectedColor = "";
+    selectedVariantId = null;
     productQuantity = 1;
 
     const discount = product.oldPrice > product.price
@@ -329,11 +328,12 @@ function productBindControls() {
         });
 
         document.getElementById("product-size-current").textContent = selectedSize;
+        productSyncSelectedVariant();
     });
 
     colorList?.addEventListener("click", event => {
         const button = event.target.closest("[data-color]");
-        if (!button) return;
+        if (!button || button.disabled) return;
 
         selectedColor = button.dataset.color;
 
@@ -344,6 +344,7 @@ function productBindControls() {
         });
 
         document.getElementById("product-color-current").textContent = selectedColor;
+        productSyncSelectedVariant();
     });
 
     function setQuantity(value) {
@@ -380,6 +381,30 @@ function productBindControls() {
     });
 }
 
+function productSyncSelectedVariant() {
+    const variant = currentProduct?.variants?.find(item =>
+        item.size === selectedSize && item.colorName === selectedColor
+    );
+    selectedVariantId = variant ? variant.id : null;
+    const stock = variant ? variant.stock : 0;
+    const quantityInput = document.getElementById("product-quantity");
+    if (quantityInput) {
+        quantityInput.max = String(Math.max(1, stock));
+        quantityInput.disabled = !variant || stock <= 0;
+    }
+    productQuantity = Math.min(productQuantity, Math.max(1, stock));
+    if (quantityInput) quantityInput.value = String(productQuantity);
+    const stockElement = document.querySelector(".product-stock");
+    if (stockElement) {
+        stockElement.textContent = variant && stock > 0 ? `Còn hàng · ${stock} sản phẩm` : "Biến thể này hiện đã hết hàng hoặc không tồn tại";
+        stockElement.classList.toggle("is-out", !variant || stock <= 0);
+    }
+    ["product-add-cart", "product-buy-now"].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) button.disabled = !variant || stock <= 0;
+    });
+}
+
 function productValidateSelection() {
     if (!selectedSize) {
         productShowToast("Vui lòng chọn kích cỡ sản phẩm.");
@@ -391,12 +416,13 @@ function productValidateSelection() {
         return false;
     }
 
-    if (!currentProduct || currentProduct.stock <= 0) {
-        productShowToast("Sản phẩm hiện đã hết hàng.");
+    const selectedVariant = currentProduct?.variants?.find(item => item.id === selectedVariantId);
+    if (!selectedVariant || selectedVariant.stock <= 0) {
+        productShowToast("Vui lòng chọn đúng biến thể còn hàng.");
         return false;
     }
 
-    if (productQuantity < 1 || productQuantity > currentProduct.stock) {
+    if (productQuantity < 1 || productQuantity > selectedVariant.stock) {
         productShowToast("Số lượng vượt quá số sản phẩm hiện có.");
         return false;
     }
@@ -408,11 +434,13 @@ function productBuildCartItem() {
     return {
         id: currentProduct.id,
         name: currentProduct.name,
-        price: currentProduct.price,
+        price: currentProduct.variants.find(item => item.id === selectedVariantId)?.price ?? currentProduct.price,
         image: currentProduct.image,
+        variantId: selectedVariantId,
         size: selectedSize,
         color: selectedColor,
-        quantity: productQuantity
+        quantity: productQuantity,
+        stock: currentProduct.variants.find(item => item.id === selectedVariantId)?.stock ?? 0
     };
 }
 
