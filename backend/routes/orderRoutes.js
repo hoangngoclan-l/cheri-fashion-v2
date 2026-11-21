@@ -309,15 +309,15 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
     // 3. Đọc và khóa sản phẩm/biến thể. Giá và tồn kho luôn lấy từ database.
     for (const item of normalizedItems) {
       const [products] = await connection.execute(
-        \`SELECT id, name, price, image, stock, status
+        `SELECT id, name, price, image, stock, status
          FROM products
          WHERE id = ?
-         FOR UPDATE\`,
+         FOR UPDATE`,
         [item.productId]
       );
 
       if (products.length === 0 || products[0].status !== "active") {
-        throw new Error(\`Sản phẩm ID \${item.productId} không tồn tại hoặc đã ngừng bán.\`);
+        throw new Error(`Sản phẩm ID ${item.productId} không tồn tại hoặc đã ngừng bán.`);
       }
 
       const product = products[0];
@@ -326,35 +326,35 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
 
       if (item.variantId !== null) {
         const [variants] = await connection.execute(
-          \`SELECT id, product_id, size, color_name, price, stock, status
+          `SELECT id, product_id, size, color_name, price, stock, status
            FROM product_variants
            WHERE id = ? AND product_id = ?
-           FOR UPDATE\`,
+           FOR UPDATE`,
           [item.variantId, item.productId]
         );
 
         if (!variants.length || variants[0].status !== "active") {
-          throw new Error(\`Biến thể đã chọn của sản phẩm "\${product.name}" không còn kinh doanh.\`);
+          throw new Error(`Biến thể đã chọn của sản phẩm "${product.name}" không còn kinh doanh.`);
         }
 
         variant = variants[0];
         if (String(variant.size || "") !== item.size || String(variant.color_name || "") !== item.colorName) {
-          throw new Error(\`Thông tin size/màu của "\${product.name}" không khớp biến thể đã chọn.\`);
+          throw new Error(`Thông tin size/màu của "${product.name}" không khớp biến thể đã chọn.`);
         }
 
         if (Number(variant.stock) < item.quantity) {
-          throw new Error(\`Biến thể "\${product.name}" không đủ số lượng trong kho.\`);
+          throw new Error(`Biến thể "${product.name}" không đủ số lượng trong kho.`);
         }
 
         if (variant.price !== null && variant.price !== undefined) {
           unitPrice = Number(variant.price);
         }
       } else if (Number(product.stock) < item.quantity) {
-        throw new Error(\`Sản phẩm "\${product.name}" không đủ số lượng trong kho.\`);
+        throw new Error(`Sản phẩm "${product.name}" không đủ số lượng trong kho.`);
       }
 
       if (!Number.isFinite(unitPrice) || unitPrice < 0) {
-        throw new Error(\`Giá sản phẩm "\${product.name}" không hợp lệ.\`);
+        throw new Error(`Giá sản phẩm "${product.name}" không hợp lệ.`);
       }
 
       const lineTotal = Math.round(unitPrice * 100 * item.quantity) / 100;
@@ -470,36 +470,36 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
 
       if (item.variantId !== null) {
         const [variantStockResult] = await connection.execute(
-          \`UPDATE product_variants
+          `UPDATE product_variants
            SET stock = stock - ?
-           WHERE id = ? AND product_id = ? AND status = 'active' AND stock >= ?\`,
+           WHERE id = ? AND product_id = ? AND status = 'active' AND stock >= ?`,
           [item.quantity, item.variantId, item.productId, item.quantity]
         );
 
         if (variantStockResult.affectedRows !== 1) {
-          throw new Error(\`Không thể trừ tồn kho biến thể của "\${item.productName}".\`);
+          throw new Error(`Không thể trừ tồn kho biến thể của "${item.productName}".`);
         }
 
         await connection.execute(
-          \`UPDATE products
+          `UPDATE products
            SET stock = (
              SELECT COALESCE(SUM(stock), 0)
              FROM product_variants
              WHERE product_id = ? AND status = 'active'
            )
-           WHERE id = ?\`,
+           WHERE id = ?`,
           [item.productId, item.productId]
         );
       } else {
         const [stockResult] = await connection.execute(
-          \`UPDATE products
+          `UPDATE products
            SET stock = stock - ?
-           WHERE id = ? AND stock >= ?\`,
+           WHERE id = ? AND stock >= ?`,
           [item.quantity, item.productId, item.quantity]
         );
 
         if (stockResult.affectedRows !== 1) {
-          throw new Error(\`Không thể cập nhật tồn kho sản phẩm "\${item.productName}".\`);
+          throw new Error(`Không thể cập nhật tồn kho sản phẩm "${item.productName}".`);
         }
       }
     }
