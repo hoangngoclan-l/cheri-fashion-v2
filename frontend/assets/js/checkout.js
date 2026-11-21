@@ -649,6 +649,7 @@ async function checkoutValidatePendingSnapshot(
 
             if (
                 Number(product.productId ?? product.id) !== Number(item.productId) ||
+                (product.variantId == null ? null : Number(product.variantId)) !== (item.variantId == null ? null : Number(item.variantId)) ||
                 String(product.size || "").trim() !== String(item.size || "").trim() ||
                 String(product.colorName || product.color || "").trim() !==
                     String(item.colorName || "").trim() ||
@@ -676,6 +677,7 @@ async function checkoutValidatePendingSnapshot(
                     snapshotCartItemId !== payloadCartItemId ||
                     Number(product.productId ?? product.id) !==
                         Number(cartItem.productId) ||
+                    (product.variantId == null ? null : Number(product.variantId)) !== (cartItem.variantId == null ? null : Number(cartItem.variantId)) ||
                     String(product.size || "").trim() !==
                         String(cartItem.size || "").trim() ||
                     String(product.colorName || product.color || "").trim() !==
@@ -941,6 +943,7 @@ function checkoutBindForm() {
         // Chuyển sản phẩm trong giỏ hàng sang định dạng API yêu cầu
         const items = checkoutProducts.map(item => ({
             productId: Number(item.productId ?? item.id),
+            variantId: item.variantId == null ? null : Number(item.variantId),
             size: String(item.size || "").trim(),
             colorName: String(item.colorName || item.color || "").trim(),
             quantity: checkoutGetQuantity(item)
@@ -981,6 +984,7 @@ function checkoutBindForm() {
             ? checkoutProducts.map(item => ({
                 cartItemId: Number(item.cartItemId),
                 productId: Number(item.productId ?? item.id),
+                variantId: item.variantId == null ? null : Number(item.variantId),
                 size: String(item.size || "").trim(),
                 colorName: String(item.colorName || item.color || "").trim(),
                 quantity: checkoutGetQuantity(item)
