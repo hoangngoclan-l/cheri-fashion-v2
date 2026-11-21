@@ -10,16 +10,16 @@
     <script src="../assets/js/app.js" defer></script>
     <style>
         .profile-page {
-            --pink: #d96b8a;
-            --pink-light: #fff0f4;
-            --text: #30272a;
-            --muted: #82767a;
-            --border: #eee2e6;
+            --pink: var(--cheri-pink);
+            --pink-light: var(--cheri-pink-light);
+            --text: var(--cheri-ink);
+            --muted: var(--cheri-muted);
+            --border: var(--cheri-border);
             max-width: 1120px;
             margin: 0 auto;
             padding: 28px 20px 60px;
             color: var(--text);
-            font-family: Arial, sans-serif;
+            font-family: inherit;
         }
 
         .profile-page * { box-sizing: border-box; }
@@ -257,7 +257,6 @@
 <body>
 <div data-include="header"></div>
 <div class="profile-page">
-der>
 
     <section class="profile-heading">
         <h1>Thông tin cá nhân</h1>

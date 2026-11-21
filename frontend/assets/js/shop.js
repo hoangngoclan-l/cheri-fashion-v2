@@ -957,7 +957,7 @@ async function confirmShopVariant(event) {
 
     // Giữ nguyên luồng mua ngay.
     if (shopSelectedAction === "buy") {
-        if (!writeShopStorage("cheri_buy_now", selectedItem)) {
+        if (!writeShopStorage(cheriStorageKey("cheri_buy_now"), selectedItem)) {
             error.textContent = "Không thể lưu sản phẩm để mua ngay.";
             error.hidden = false;
             return;

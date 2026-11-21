@@ -1,4 +1,4 @@
--- CHERI FASHION
+﻿-- CHERI FASHION
 -- Cấu trúc dữ liệu nền tảng cho backend Express + MySQL.
 -- Có thể chạy nhiều lần an toàn nhờ CREATE TABLE IF NOT EXISTS.
 
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS orders (
     total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     payment_method VARCHAR(40) NOT NULL DEFAULT 'cod',
     payment_status VARCHAR(30) NOT NULL DEFAULT 'unpaid',
-    order_status VARCHAR(30) NOT NULL DEFAULT 'pending',
+    order_status ENUM('pending','confirmed','processing','shipping','completed','cancelled') NOT NULL DEFAULT 'pending',
     customer_note TEXT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -128,6 +128,18 @@ CREATE TABLE IF NOT EXISTS orders (
         ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Chống tạo đơn hàng trùng khi client gửi lại cùng yêu cầu.
+CREATE TABLE IF NOT EXISTS order_idempotency (
+    idempotency_key VARCHAR(100) NOT NULL,
+    user_id BIGINT UNSIGNED NULL,
+    request_hash CHAR(64) NOT NULL,
+    order_id BIGINT UNSIGNED NULL,
+    guest_token_hash CHAR(64) NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (idempotency_key),
+    KEY idx_order_idempotency_order (order_id),
+    KEY idx_order_idempotency_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS order_items (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     order_id BIGINT UNSIGNED NOT NULL,

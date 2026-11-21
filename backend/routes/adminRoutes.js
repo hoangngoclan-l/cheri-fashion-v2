@@ -7,7 +7,7 @@ const adminMiddleware = require("../middleware/adminMiddleware");
 const router = express.Router();
 router.use(adminMiddleware);
 
-const ORDER_STATUSES = ["pending", "confirmed", "processing", "shipping", "delivered", "cancelled", "returned"];
+const ORDER_STATUSES = ["pending", "confirmed", "processing", "shipping", "completed", "cancelled"];
 const PRODUCT_STATUSES = ["active", "inactive"];
 
 function positiveId(value) {
@@ -26,7 +26,7 @@ router.get("/dashboard", async (req, res) => {
         const [[sales]] = await pool.execute(`
             SELECT
                 COUNT(*) AS total_orders,
-                COALESCE(SUM(CASE WHEN order_status NOT IN ('cancelled', 'returned') THEN total_amount ELSE 0 END), 0) AS gross_revenue,
+                COALESCE(SUM(CASE WHEN order_status <> 'cancelled' THEN total_amount ELSE 0 END), 0) AS gross_revenue,
                 SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) AS pending_orders,
                 SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) AS today_orders
             FROM orders
@@ -45,7 +45,7 @@ router.get("/dashboard", async (req, res) => {
             SELECT oi.product_name, SUM(oi.quantity) AS units_sold, SUM(oi.line_total) AS revenue
             FROM order_items oi
             INNER JOIN orders o ON o.id = oi.order_id
-            WHERE o.order_status NOT IN ('cancelled', 'returned')
+            WHERE o.order_status <> 'cancelled'
             GROUP BY oi.product_name
             ORDER BY units_sold DESC LIMIT 5
         `);
@@ -242,39 +242,102 @@ router.get("/orders", async (req, res) => {
 router.patch("/orders/:id/status", async (req, res) => {
     const id = positiveId(req.params.id);
     const status = String(req.body.status || "").trim();
+
     if (!id || !ORDER_STATUSES.includes(status)) {
-        return res.status(400).json({ success: false, message: "Đơn hàng hoặc trạng thái không hợp lệ." });
+        return res.status(400).json({
+            success: false,
+            message: "Đơn hàng hoặc trạng thái không hợp lệ."
+        });
     }
 
-    let connection;
+    let connection = null;
+    let beginAttempted = false;
+    let transactionStarted = false;
+    let commitAttempted = false;
+
+    const destroyConnection = () => {
+        if (!connection) return;
+
+        const failedConnection = connection;
+        connection = null;
+
+        try {
+            failedConnection.destroy();
+        } catch (destroyError) {
+            console.error(
+                "Không thể hủy connection đơn hàng:",
+                destroyError
+            );
+        }
+    };
+
+    const rollbackTransaction = async () => {
+        if (!connection || !transactionStarted) return;
+
+        try {
+            await connection.rollback();
+            transactionStarted = false;
+        } catch (rollbackError) {
+            console.error(
+                "Rollback đơn hàng thất bại:",
+                rollbackError
+            );
+
+            destroyConnection();
+            throw rollbackError;
+        }
+    };
+
+    const commitTransaction = async () => {
+        commitAttempted = true;
+        await connection.commit();
+        transactionStarted = false;
+    };
+
     try {
         connection = await pool.getConnection();
+
+        beginAttempted = true;
         await connection.beginTransaction();
+        transactionStarted = true;
+
         const [orders] = await connection.execute(
-            "SELECT id, order_status FROM orders WHERE id = ? FOR UPDATE", [id]
+            "SELECT id, order_status FROM orders WHERE id = ? FOR UPDATE",
+            [id]
         );
+
         if (!orders.length) {
-            await connection.rollback();
-            return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+            await rollbackTransaction();
+
+            return res.status(404).json({
+                success: false,
+                message: "Không tìm thấy đơn hàng."
+            });
         }
 
         const current = orders[0].order_status;
+
         if (current === status) {
-            await connection.commit();
-            return res.json({ success: true, message: "Đơn hàng đã ở trạng thái này." });
+            await commitTransaction();
+
+            return res.json({
+                success: true,
+                message: "Đơn hàng đã ở trạng thái này."
+            });
         }
 
         const transitions = {
             pending: ["confirmed", "cancelled"],
             confirmed: ["processing", "cancelled"],
             processing: ["shipping", "cancelled"],
-            shipping: ["delivered"],
-            delivered: ["returned"],
-            cancelled: [],
-            returned: []
+            shipping: ["completed"],
+            completed: [],
+            cancelled: []
         };
+
         if (!transitions[current]?.includes(status)) {
-            await connection.rollback();
+            await rollbackTransaction();
+
             return res.status(409).json({
                 success: false,
                 message: `Không thể chuyển đơn từ "${current}" sang "${status}".`
@@ -286,23 +349,47 @@ router.patch("/orders/:id/status", async (req, res) => {
                 "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
                 [id]
             );
-            if (!items.length || items.some(item => item.product_id == null)) {
-                await connection.rollback();
+
+            if (
+                !items.length ||
+                items.some(item => item.product_id == null)
+            ) {
+                await rollbackTransaction();
+
                 return res.status(409).json({
                     success: false,
-                    message: "Đơn hàng cũ thiếu liên kết sản phẩm để hoàn kho an toàn. Cần đối soát tồn kho thủ công trước khi hủy."
+                    message:
+                        "Đơn hàng cũ thiếu liên kết sản phẩm để hoàn kho an toàn. Cần đối soát tồn kho thủ công trước khi hủy."
                 });
             }
+
             for (const item of items) {
-                await connection.execute(
+                const [restockResult] = await connection.execute(
                     "UPDATE products SET stock = stock + ? WHERE id = ?",
                     [item.quantity, item.product_id]
                 );
+
+                if (restockResult.affectedRows !== 1) {
+                    throw new Error(
+                        `Không thể hoàn kho sản phẩm ID ${item.product_id}. Giao dịch đã bị hủy để bảo toàn dữ liệu.`
+                    );
+                }
             }
         }
 
-        await connection.execute("UPDATE orders SET order_status = ? WHERE id = ?", [status, id]);
-        await connection.commit();
+        const [updateResult] = await connection.execute(
+            "UPDATE orders SET order_status = ? WHERE id = ?",
+            [status, id]
+        );
+
+        if (updateResult.affectedRows !== 1) {
+            throw new Error(
+                "Không cập nhật được đúng một đơn hàng. Giao dịch đã bị hủy."
+            );
+        }
+
+        await commitTransaction();
+
         return res.json({
             success: true,
             message: status === "cancelled"
@@ -311,16 +398,35 @@ router.patch("/orders/:id/status", async (req, res) => {
         });
     } catch (error) {
         if (connection) {
-            try { await connection.rollback(); } catch (rollbackError) {
-                console.error("Rollback đơn hàng thất bại:", rollbackError);
+            if (commitAttempted || (beginAttempted && !transactionStarted)) {
+                // Kết quả COMMIT hoặc BEGIN không xác định:
+                // không đưa connection này trở lại pool.
+                destroyConnection();
+            } else if (transactionStarted) {
+                try {
+                    await rollbackTransaction();
+                } catch (rollbackError) {
+                    // rollbackTransaction đã hủy connection.
+                    console.error(
+                        "Không thể khôi phục transaction đơn hàng:",
+                        rollbackError
+                    );
+                }
             }
         }
-        return sendError(res, error, "Không thể cập nhật trạng thái đơn hàng.");
+
+        return sendError(
+            res,
+            error,
+            "Không thể cập nhật trạng thái đơn hàng."
+        );
     } finally {
-        connection?.release();
+        if (connection) {
+            connection.release();
+            connection = null;
+        }
     }
 });
-
 // GET /api/admin/customers
 router.get("/customers", async (req, res) => {
     try {

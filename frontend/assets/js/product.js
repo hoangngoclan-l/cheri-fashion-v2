@@ -423,7 +423,7 @@ async function productAddToCart(buyNow) {
 
     if (buyNow) {
         try {
-            localStorage.setItem("cheri_buy_now", JSON.stringify(item));
+            productWriteStorage(cheriStorageKey("cheri_buy_now"), item);
             window.location.href = "checkout.html?mode=buy-now";
         } catch {
             productShowToast("Không thể lưu thông tin sản phẩm. Hãy kiểm tra bộ nhớ trình duyệt.");
@@ -440,7 +440,7 @@ async function productAddToCart(buyNow) {
         }
     } else {
         try {
-            const cart = productReadStorage("cheri_cart");
+            const cart = productReadStorage(cheriStorageKey("cheri_cart"));
             const existingItem = cart.find(cartItem =>
                 String(cartItem.id ?? cartItem.product_id) === String(item.id) &&
                 String(cartItem.size ?? "") === item.size &&
@@ -458,7 +458,7 @@ async function productAddToCart(buyNow) {
                 cart.push({ ...item, qty: item.quantity });
             }
 
-            productWriteStorage("cheri_cart", cart);
+            productWriteStorage(cheriStorageKey("cheri_cart"), cart);
         } catch {
             productShowToast("Không thể cập nhật giỏ hàng. Vui lòng thử lại.");
             return;

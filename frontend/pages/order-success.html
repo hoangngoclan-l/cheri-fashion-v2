@@ -182,106 +182,352 @@
     <div data-include="footer"></div>
 
     <script>
-        "use strict";
+    "use strict";
 
-        const formatMoney = value =>
-            new Intl.NumberFormat("vi-VN").format(Number(value) || 0) + "đ";
+    const formatMoney = value =>
+        new Intl.NumberFormat("vi-VN").format(Number(value) || 0) + "đ";
 
-        const escapeHTML = value =>
-            String(value ?? "").replace(/[&<>"']/g, char => ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;"
-            })[char]);
+    const escapeHTML = value =>
+        String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]);
 
-        const order = JSON.parse(
-            localStorage.getItem("cheri_order_confirmation") || "null"
+    const params = new URLSearchParams(window.location.search);
+    const urlOrderCode = params.get("code") || "";
+    const urlOrderId = params.get("id") || "";
+
+    const isValidOrderCode = value =>
+        /^CH[A-Z0-9]+$/i.test(String(value || ""));
+
+    const isValidOrderId = value =>
+        /^[1-9]\d*$/.test(String(value || ""));
+
+    const orderCodeElement = document.getElementById("order-code");
+    const descriptionElement =
+        document.querySelector(".success-description");
+    const headingElement =
+        document.querySelector(".success-heading");
+    const infoSections =
+        document.querySelectorAll(".order-info");
+    const copyButton =
+        document.getElementById("copy-order-code");
+
+    function hideOrderDetails() {
+        infoSections.forEach(section => {
+            section.hidden = true;
+        });
+    }
+
+    function normalizeApiOrder(raw) {
+        if (!raw || typeof raw !== "object") return null;
+
+        return {
+            orderId: raw.id,
+            orderCode: raw.order_code,
+            idempotencyKey: raw.idempotency_key,
+            recipientName: raw.recipient_name,
+            phone: raw.phone,
+            address: raw.shipping_address,
+            paymentMethod: raw.payment_method,
+            orderStatus: raw.order_status,
+            total: raw.total_amount,
+            items: Array.isArray(raw.items)
+                ? raw.items.map(item => ({
+                    name: item.product_name,
+                    size: item.size,
+                    colorName: item.color_name,
+                    quantity: item.quantity,
+                    price: item.unit_price,
+                    lineTotal: item.line_total
+                }))
+                : []
+        };
+    }
+
+    async function fetchOrderDetails(orderId, token) {
+        const headers = {};
+
+        if (token) {
+            headers.Authorization = `Bearer ${token}`;
+        }
+
+        const endpoints = [];
+
+        if (token) {
+            endpoints.push(
+                `/api/orders/my-orders/${encodeURIComponent(orderId)}`
+            );
+        }
+
+        // Cookie HttpOnly được trình duyệt tự gửi cùng request same-origin.
+        endpoints.push(
+            `/api/orders/guest/${encodeURIComponent(orderId)}`
         );
 
-        if (!order || !order.orderCode) {
-            document.getElementById("success-content").innerHTML = `
-                <div class="order-error">
-                    <h1>Không tìm thấy thông tin xác nhận</h1>
-                    <p>Vui lòng kiểm tra đơn hàng hoặc quay lại cửa hàng.</p>
-                    <a href="index.html">Về trang chủ</a>
-                </div>
-            `;
-        } else {
-            document.getElementById("order-code").textContent =
-                order.orderCode;
+        for (const endpoint of endpoints) {
+            try {
+                const response = await fetch(endpoint, {
+                    method: "GET",
+                    headers,
+                    credentials: "same-origin",
+                    cache: "no-store"
+                });
 
-            document.getElementById("receiver-name").textContent =
-                order.recipientName || "—";
+                if (!response.ok) continue;
 
-            document.getElementById("receiver-phone").textContent =
-                order.phone || "—";
+                const result = await response.json();
 
-            document.getElementById("receiver-address").textContent = [
-                order.address,
+                if (!result.success || !result.order) continue;
+
+                const normalized = normalizeApiOrder(result.order);
+
+                if (
+                    normalized &&
+                    String(normalized.orderId) === String(orderId) &&
+                    isValidOrderCode(normalized.orderCode) &&
+                    normalized.orderCode.toUpperCase() ===
+                        urlOrderCode.toUpperCase()
+                ) {
+                    return normalized;
+                }
+            } catch (error) {
+                console.error(
+                    "Không thể tải chi tiết đơn hàng:",
+                    error
+                );
+            }
+        }
+
+        return null;
+    }
+
+    function renderOrder(order) {
+        const paymentNames = {
+            cod: "Thanh toán khi nhận hàng",
+            bank_transfer: "Chuyển khoản ngân hàng",
+            online: "Thanh toán trực tuyến"
+        };
+
+        const statusNames = {
+            pending: "Chờ xác nhận",
+            confirmed: "Đã xác nhận",
+            processing: "Đang xử lý",
+            shipping: "Đang giao hàng",
+            completed: "Hoàn thành",
+            cancelled: "Đã hủy"
+        };
+
+        orderCodeElement.textContent = order.orderCode;
+
+        document.getElementById("receiver-name").textContent =
+            order.recipientName || "—";
+
+        document.getElementById("receiver-phone").textContent =
+            order.phone || "—";
+
+        document.getElementById("receiver-address").textContent =
+            order.address ||
+            [
                 order.ward,
                 order.province
-            ].filter(Boolean).join(", ") || "—";
+            ].filter(Boolean).join(", ") ||
+            "—";
 
-            const paymentNames = {
-                cod: "Thanh toán khi nhận hàng",
-                bank_transfer: "Chuyển khoản ngân hàng",
-                online: "Thanh toán trực tuyến"
-            };
+        document.getElementById("payment-method").textContent =
+            paymentNames[order.paymentMethod] ||
+            order.paymentMethod ||
+            "—";
 
-            document.getElementById("payment-method").textContent =
-                paymentNames[order.paymentMethod] || order.paymentMethod || "—";
+        document.getElementById("order-status").textContent =
+            statusNames[order.orderStatus] || "Chờ xác nhận";
 
-            const statusNames = {
-                pending: "Chờ xác nhận",
-                confirmed: "Đã xác nhận",
-                processing: "Đang xử lý",
-                shipping: "Đang giao hàng",
-                completed: "Hoàn thành",
-                cancelled: "Đã hủy"
-            };
+        const items = Array.isArray(order.items) ? order.items : [];
 
-            document.getElementById("order-status").textContent =
-                statusNames[order.orderStatus] || "Chờ xác nhận";
+        document.getElementById("order-items").innerHTML =
+            items.length
+                ? items.map(item => {
+                    const quantity = Math.max(
+                        0,
+                        Number(item.quantity ?? item.qty) || 0
+                    );
 
-            const items = Array.isArray(order.items) ? order.items : [];
+                    const unitPrice = Number(
+                        item.price ?? item.unitPrice
+                    ) || 0;
 
-            document.getElementById("order-items").innerHTML = items.length
-                ? items.map(item => `
-                    <div style="padding:12px 0;border-bottom:1px solid #eee">
-                        <strong>${escapeHTML(item.name || "Sản phẩm")}</strong>
-                        <div>
-                            Phân loại:
-                            ${escapeHTML(item.size || "—")} /
-                            ${escapeHTML(item.colorName || item.color || "—")}
+                    const lineTotal = item.lineTotal !== undefined
+                        ? Number(item.lineTotal) || 0
+                        : unitPrice * quantity;
+
+                    return `
+                        <div style="padding:12px 0;border-bottom:1px solid #eee">
+                            <strong>${escapeHTML(item.name || item.productName || "Sản phẩm")}</strong>
+                            <div>
+                                Phân loại:
+                                ${escapeHTML(item.size || "—")} /
+                                ${escapeHTML(item.colorName || item.color || "—")}
+                            </div>
+                            <div>Số lượng: ${quantity}</div>
+                            <div>${formatMoney(lineTotal)}</div>
                         </div>
-                        <div>
-                            Số lượng: ${Number(item.quantity ?? item.qty) || 1}
-                        </div>
-                        <div>
-                            ${formatMoney(
-                                (Number(item.price) || 0) *
-                                (Number(item.quantity ?? item.qty) || 1)
-                            )}
-                        </div>
-                    </div>
-                `).join("")
+                    `;
+                }).join("")
                 : "<p>Không có thông tin sản phẩm để hiển thị.</p>";
 
-            document.getElementById("order-total").textContent =
-                formatMoney(order.total);
+        document.getElementById("order-total").textContent =
+            formatMoney(order.total);
 
-            document.getElementById("copy-order-code")
-                .addEventListener("click", async () => {
+        infoSections.forEach(section => {
+            section.hidden = false;
+        });
+    }
+
+    function showGenericConfirmation(message) {
+        headingElement.textContent = "Chưa thể xác minh đơn hàng";
+        descriptionElement.textContent = message;
+        orderCodeElement.textContent = "Chưa xác minh";
+
+        hideOrderDetails();
+
+        if (copyButton) {
+            copyButton.hidden = true;
+        }
+
+        const successIcon = document.querySelector(".success-icon");
+
+        if (successIcon) {
+            successIcon.textContent = "!";
+            successIcon.setAttribute(
+                "aria-label",
+                "Chưa xác minh được đơn hàng"
+            );
+        }
+    }
+
+    async function initializeOrderConfirmation() {
+        let token = null;
+        let pendingStorageKey = "cheri_pending_order_idempotency_guest";
+        let order = null;
+
+        if (!isValidOrderCode(urlOrderCode)) {
+            headingElement.textContent = "Chưa có thông tin xác nhận";
+            descriptionElement.textContent =
+                "Không tìm thấy mã đơn hàng hợp lệ. " +
+                "Vui lòng kiểm tra lịch sử đơn hàng trước khi thử đặt lại.";
+
+            orderCodeElement.textContent = "Không có mã đơn hàng";
+            hideOrderDetails();
+
+            if (copyButton) copyButton.hidden = true;
+            return;
+        }
+
+        // 1. Đọc thông tin xác thực và xác định vùng pending của tài khoản.
+        try {
+            token = localStorage.getItem("cheri_auth_token");
+
+            if (token) {
+                const user = JSON.parse(
+                    localStorage.getItem("cheri_auth_user") || "null"
+                );
+
+                const pendingUserId = String(user?.id ?? "").trim();
+
+                pendingStorageKey = /^[1-9]\d*$/.test(pendingUserId)
+                    ? `cheri_pending_order_idempotency_user_${pendingUserId}`
+                    : null;
+            }
+        } catch (storageError) {
+            console.error(
+                "Không thể đọc thông tin xác thực:",
+                storageError
+            );
+
+            token = null;
+            pendingStorageKey = "cheri_pending_order_idempotency_guest";
+        }
+
+        // 2. Backend là nguồn xác minh chính thức.
+        // Không dùng dữ liệu localStorage để thay thế kết quả API.
+        if (isValidOrderId(urlOrderId)) {
+            order = await fetchOrderDetails(urlOrderId, token);
+        }
+
+        // 3. Chỉ dọn pending sau khi API xác minh được đơn hàng.
+        if (order) {
+            try {
+                const pending = pendingStorageKey
+                    ? JSON.parse(
+                        localStorage.getItem(pendingStorageKey) || "null"
+                    )
+                    : null;
+
+                const validPendingKey =
+                    /^[A-Za-z0-9_-]{32,100}$/.test(pending?.key || "");
+
+                const matchesOrderId =
+                    isValidOrderId(pending?.orderId) &&
+                    String(pending.orderId) === String(order.orderId);
+
+                const matchesConfirmationKey =
+                    typeof order.idempotencyKey === "string" &&
+                    pending?.key === order.idempotencyKey;
+
+                if (
+                    pendingStorageKey &&
+                    validPendingKey &&
+                    (matchesOrderId || matchesConfirmationKey)
+                ) {
+                    localStorage.removeItem(pendingStorageKey);
+                }
+            } catch (storageError) {
+                console.error(
+                    "Không thể dọn khóa idempotency sau xác nhận:",
+                    storageError
+                );
+            }
+
+            renderOrder(order);
+
+            if (copyButton) {
+                copyButton.hidden = false;
+
+                copyButton.addEventListener("click", async () => {
                     try {
-                        await navigator.clipboard.writeText(order.orderCode);
-                        alert("Đã sao chép mã đơn hàng: " + order.orderCode);
+                        await navigator.clipboard.writeText(
+                            order.orderCode
+                        );
+
+                        alert(
+                            "Đã sao chép mã đơn hàng: " +
+                            order.orderCode
+                        );
                     } catch (error) {
-                        prompt("Hãy sao chép mã đơn hàng:", order.orderCode);
+                        prompt(
+                            "Hãy sao chép mã đơn hàng:",
+                            order.orderCode
+                        );
                     }
                 });
+            }
+
+            return;
         }
-    </script>
+
+        // 4. API chưa xác minh được: không hiển thị đơn từ localStorage.
+        // Giữ pending để người dùng có thể tải lại và đối chiếu sau.
+        showGenericConfirmation(
+            "Hệ thống chưa xác minh được đơn hàng từ máy chủ. " +
+            "Vui lòng kiểm tra lịch sử đơn hàng hoặc tải lại trang. " +
+            "Nếu vừa gửi yêu cầu đặt hàng, không gửi lại trước khi kiểm tra trạng thái đơn."
+        );
+    }
+
+    initializeOrderConfirmation();
+</script>
 </body>
 </html>
