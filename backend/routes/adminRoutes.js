@@ -423,33 +423,57 @@ router.patch("/orders/:id/status", async (req, res) => {
 
         if (status === "cancelled") {
             const [items] = await connection.execute(
-                "SELECT product_id, quantity FROM order_items WHERE order_id = ?",
+                "SELECT variant_id, product_id, quantity FROM order_items WHERE order_id = ?",
                 [id]
             );
 
-            if (
-                !items.length ||
-                items.some(item => item.product_id == null)
-            ) {
+            if (!items.length || items.some(item => item.product_id == null)) {
                 await rollbackTransaction();
-
                 return res.status(409).json({
                     success: false,
-                    message:
-                        "Đơn hàng cũ thiếu liên kết sản phẩm để hoàn kho an toàn. Cần đối soát tồn kho thủ công trước khi hủy."
+                    message: "Đơn hàng cũ thiếu liên kết sản phẩm để hoàn kho an toàn. Cần đối soát tồn kho thủ công trước khi hủy."
                 });
             }
 
             for (const item of items) {
-                const [restockResult] = await connection.execute(
-                    "UPDATE products SET stock = stock + ? WHERE id = ?",
-                    [item.quantity, item.product_id]
-                );
-
-                if (restockResult.affectedRows !== 1) {
-                    throw new Error(
-                        `Không thể hoàn kho sản phẩm ID ${item.product_id}. Giao dịch đã bị hủy để bảo toàn dữ liệu.`
+                if (item.variant_id !== null && item.variant_id !== undefined) {
+                    const [variantRows] = await connection.execute(
+                        "SELECT id FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE",
+                        [item.variant_id, item.product_id]
                     );
+
+                    if (!variantRows.length) {
+                        throw new Error("Không tìm thấy biến thể của đơn hàng; đã rollback để tránh hoàn kho sai.");
+                    }
+
+                    const [restockResult] = await connection.execute(
+                        "UPDATE product_variants SET stock = stock + ? WHERE id = ? AND product_id = ?",
+                        [item.quantity, item.variant_id, item.product_id]
+                    );
+
+                    if (restockResult.affectedRows !== 1) {
+                        throw new Error("Không thể hoàn kho biến thể. Giao dịch đã bị hủy để bảo toàn dữ liệu.");
+                    }
+
+                    await connection.execute(
+                        \`UPDATE products
+                         SET stock = (
+                           SELECT COALESCE(SUM(stock), 0)
+                           FROM product_variants
+                           WHERE product_id = ? AND status = 'active'
+                         )
+                         WHERE id = ?\`,
+                        [item.product_id, item.product_id]
+                    );
+                } else {
+                    const [restockResult] = await connection.execute(
+                        "UPDATE products SET stock = stock + ? WHERE id = ?",
+                        [item.quantity, item.product_id]
+                    );
+
+                    if (restockResult.affectedRows !== 1) {
+                        throw new Error("Không thể hoàn kho sản phẩm. Giao dịch đã bị hủy để bảo toàn dữ liệu.");
+                    }
                 }
             }
         }
