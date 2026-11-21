@@ -471,6 +471,7 @@ async function productAddToCart(buyNow) {
             const cart = productReadStorage(cheriStorageKey("cheri_cart"));
             const existingItem = cart.find(cartItem =>
                 String(cartItem.id ?? cartItem.product_id) === String(item.id) &&
+                Number(cartItem.variantId ?? 0) === Number(item.variantId ?? 0) &&
                 String(cartItem.size ?? "") === item.size &&
                 String(cartItem.color ?? cartItem.colorName ?? "") === item.color
             );
@@ -478,7 +479,7 @@ async function productAddToCart(buyNow) {
             if (existingItem) {
                 const oldQuantity = Number(existingItem.quantity ?? existingItem.qty ?? 0);
                 existingItem.quantity = Math.min(
-                    currentProduct.stock,
+                    item.stock,
                     oldQuantity + item.quantity
                 );
                 existingItem.qty = existingItem.quantity;
