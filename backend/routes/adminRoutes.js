@@ -436,6 +436,16 @@ router.patch("/orders/:id/status", async (req, res) => {
             }
 
             for (const item of items) {
+                // Khóa sản phẩm trước biến thể, cùng thứ tự với luồng tạo đơn để giảm deadlock.
+                const [productRows] = await connection.execute(
+                    "SELECT id FROM products WHERE id = ? FOR UPDATE",
+                    [item.product_id]
+                );
+
+                if (!productRows.length) {
+                    throw new Error("Không tìm thấy sản phẩm của đơn hàng; đã rollback để tránh hoàn kho sai.");
+                }
+
                 if (item.variant_id !== null && item.variant_id !== undefined) {
                     const [variantRows] = await connection.execute(
                         "SELECT id FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE",
