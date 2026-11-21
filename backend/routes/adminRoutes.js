@@ -258,7 +258,7 @@ router.post('/products/:id/variants', async (req, res) => {
     const price = body.price === '' || body.price === null || body.price === undefined ? null : Number(body.price);
     const stock = Number(body.stock);
     const status = String(body.status || 'active');
-    if (!productId || !sku || sku.length > 80 || (size && size.length > 40) || (colorName && colorName.length > 80) || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
+    if (!productId || !sku || !size || !colorName || sku.length > 80 || size.length > 40 || colorName.length > 80 || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
     }
     try {
@@ -285,7 +285,7 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
     const price = body.price === '' || body.price === null || body.price === undefined ? null : Number(body.price);
     const stock = Number(body.stock);
     const status = String(body.status || 'active');
-    if (!productId || !variantId || !sku || sku.length > 80 || (size && size.length > 40) || (colorName && colorName.length > 80) || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
+    if (!productId || !variantId || !sku || !size || !colorName || sku.length > 80 || size.length > 40 || colorName.length > 80 || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
     }
     try {
