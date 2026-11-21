@@ -72,101 +72,48 @@ app.get("/api/health/db", async (req, res) => {
    API SẢN PHẨM - LẤY DỮ LIỆU TỪ MYSQL
    ========================================= */
 
-// Lấy danh sách sản phẩm đang hoạt động.
-app.get("/api/products", async (req, res) => {
+// Chuẩn hóa biến thể từ DB thành dữ liệu dùng chung cho Shop và trang chi tiết.
+async function attachProductVariants(products) {
+    if (!products.length) return products;
+    const ids = products.map(product => Number(product.id));
+    const placeholders = ids.map(() => '?').join(',');
+    const [variants] = await pool.execute(
+        'SELECT id, product_id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE product_id IN (' + placeholders + ') ORDER BY product_id ASC, id ASC',
+        ids
+    );
+    const grouped = new Map(ids.map(id => [id, []]));
+    for (const variant of variants) {
+        const list = grouped.get(Number(variant.product_id));
+        if (list) list.push(variant);
+    }
+    return products.map(product => ({ ...product, variants: grouped.get(Number(product.id)) || [] }));
+}
+
+// Danh sách sản phẩm đang hoạt động kèm biến thể thật.
+app.get('/api/products', async (req, res) => {
     try {
-        const [products] = await pool.execute(`
-            SELECT
-                id,
-                product_code,
-                name,
-                category,
-                category_slug,
-                price,
-                old_price,
-                image,
-                description,
-                is_new,
-                is_sale,
-                stock,
-                status
-            FROM products
-            WHERE status = 'active'
-            ORDER BY id ASC
-        `);
-
-        return res.status(200).json({
-            success: true,
-            products
-        });
+        const [products] = await pool.execute("SELECT id, product_code, name, category, category_slug, price, old_price, image, description, is_new, is_sale, stock, status FROM products WHERE status = 'active' ORDER BY id ASC");
+        return res.status(200).json({ success: true, products: await attachProductVariants(products) });
     } catch (error) {
-        console.error("Lỗi lấy danh sách sản phẩm:", error.message);
-
-        return res.status(500).json({
-            success: false,
-            message: "Không thể tải danh sách sản phẩm."
-        });
+        console.error('Lỗi lấy danh sách sản phẩm:', error.message);
+        return res.status(500).json({ success: false, message: 'Không thể tải danh sách sản phẩm.' });
     }
 });
 
-// Lấy chi tiết một sản phẩm theo ID MySQL.
-app.get("/api/products/:id", async (req, res) => {
+// Chi tiết sản phẩm kèm biến thể.
+app.get('/api/products/:id', async (req, res) => {
     const productId = Number(req.params.id);
-
-    if (!Number.isSafeInteger(productId) || productId <= 0) {
-        return res.status(400).json({
-            success: false,
-            message: "ID sản phẩm không hợp lệ."
-        });
-    }
-
+    if (!Number.isSafeInteger(productId) || productId <= 0) return res.status(400).json({ success: false, message: 'ID sản phẩm không hợp lệ.' });
     try {
-        const [products] = await pool.execute(
-            `
-                SELECT
-                    id,
-                    product_code,
-                    name,
-                    category,
-                    category_slug,
-                    price,
-                    old_price,
-                    image,
-                    description,
-                    is_new,
-                    is_sale,
-                    stock,
-                    status
-                FROM products
-                WHERE id = ?
-                  AND status = 'active'
-                LIMIT 1
-            `,
-            [productId]
-        );
-
-        if (products.length === 0) {
-            return res.status(404).json({
-                success: false,
-                message: "Không tìm thấy sản phẩm."
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            product: products[0]
-        });
+        const [products] = await pool.execute("SELECT id, product_code, name, category, category_slug, price, old_price, image, description, is_new, is_sale, stock, status FROM products WHERE id = ? AND status = 'active' LIMIT 1", [productId]);
+        if (!products.length) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+        const [product] = await attachProductVariants(products);
+        return res.status(200).json({ success: true, product });
     } catch (error) {
-        console.error("Lỗi lấy chi tiết sản phẩm:", error.message);
-
-        return res.status(500).json({
-            success: false,
-            message: "Không thể tải chi tiết sản phẩm."
-        });
+        console.error('Lỗi lấy chi tiết sản phẩm:', error.message);
+        return res.status(500).json({ success: false, message: 'Không thể tải chi tiết sản phẩm.' });
     }
 });
-
-
 // API đặt hàng mới
 app.use("/api/auth", authRoutes);
 app.use("/api/orders", orderRoutes);
