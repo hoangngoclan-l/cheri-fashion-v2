@@ -132,6 +132,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
 
   for (const item of items) {
     const productId = Number(item.productId);
+    const variantId = item.variantId === null || item.variantId === undefined || item.variantId === "" ? null : Number(item.variantId);
     const quantity = Number(item.quantity);
     const size = String(item.size || "").trim();
     const colorName = String(item.colorName || item.color || "").trim();
@@ -139,6 +140,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
     if (
       !Number.isSafeInteger(productId) ||
       productId <= 0 ||
+      (variantId !== null && (!Number.isSafeInteger(variantId) || variantId <= 0)) ||
       !Number.isSafeInteger(quantity) ||
       quantity <= 0 ||
       !size ||
@@ -152,7 +154,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
     }
 
     // Không cho phép gửi trùng một lựa chọn sản phẩm trong cùng yêu cầu.
-    const key = `${productId}|${size}|${colorName}`;
+    const key = String(productId) + "|" + String(variantId || "legacy") + "|" + size + "|" + colorName;
 
     if (seen.has(key)) {
       return res.status(400).json({
@@ -165,6 +167,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
     seen.add(key);
     normalizedItems.push({
       productId,
+      variantId,
       quantity,
       size,
       colorName,
@@ -196,6 +199,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
       const cartItemId = Number(cartItem.cartItemId);
       const productId = Number(cartItem.productId);
       const quantity = Number(cartItem.quantity);
+      const variantId = cartItem.variantId === null || cartItem.variantId === undefined || cartItem.variantId === "" ? null : Number(cartItem.variantId);
       const size = String(cartItem.size || "").trim();
       const colorName = String(cartItem.colorName || "").trim();
 
@@ -204,6 +208,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
         cartItemId <= 0 ||
         !Number.isSafeInteger(productId) ||
         productId <= 0 ||
+        (variantId !== null && (!Number.isSafeInteger(variantId) || variantId <= 0)) ||
         !Number.isSafeInteger(quantity) ||
         quantity <= 0 ||
         !size ||
@@ -220,6 +225,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
       const matchingOrderItemIndex = normalizedItems.findIndex(
         item =>
           item.productId === productId &&
+          item.variantId === variantId &&
           item.size === size &&
           item.colorName === colorName &&
           item.quantity === quantity
@@ -241,6 +247,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
       normalizedCartItems.push({
         cartItemId,
         productId,
+        variantId,
         quantity,
         size,
         colorName,
@@ -450,7 +457,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
     if (isAuthenticatedCartCheckout) {
       for (const item of normalizedCartItems) {
         const [cartRows] = await connection.execute(
-          `SELECT id, product_id, size, color, quantity
+          `SELECT id, product_id, variant_id, size, color, quantity
            FROM cart_items
            WHERE id = ? AND user_id = ?
            FOR UPDATE`,
@@ -467,6 +474,7 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
 
         if (
           Number(cartRow.product_id) !== item.productId ||
+          (cartRow.variant_id == null ? null : Number(cartRow.variant_id)) !== item.variantId ||
           String(cartRow.size) !== item.size ||
           String(cartRow.color) !== item.colorName ||
           Number(cartRow.quantity) < item.quantity
