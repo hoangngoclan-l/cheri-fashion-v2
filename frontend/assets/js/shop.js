@@ -1022,6 +1022,7 @@ async function confirmShopVariant(event) {
 
     const existing = cart.find(item =>
         String(item.id) === String(selectedItem.id) &&
+        Number(item.variantId ?? 0) === Number(selectedItem.variantId ?? 0) &&
         item.size === selectedItem.size &&
         item.color === selectedItem.color
     );
@@ -1030,9 +1031,9 @@ async function confirmShopVariant(event) {
         const existingQuantity =
             Number(existing.quantity ?? existing.qty) || 0;
 
-        if (existingQuantity + quantity > product.stock) {
+        if (existingQuantity + quantity > selectedItem.stock) {
             error.textContent =
-                `Bạn chỉ có thể chọn tối đa ${product.stock} sản phẩm.`;
+                `Bạn chỉ có thể chọn tối đa ${selectedItem.stock} sản phẩm.`;
 
             error.hidden = false;
             return;
