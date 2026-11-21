@@ -250,7 +250,8 @@ function productRenderDetail(product) {
                                max="${product.stock}"
                                value="1"
                                inputmode="numeric"
-                               aria-label="Số lượng mua">
+                               aria-label="Số lượng mua"
+                               ${product.variants.length === 0 ? "disabled" : ""}>
 
                         <button type="button" id="product-quantity-plus"
                                 aria-label="Tăng số lượng">+</button>
@@ -261,14 +262,14 @@ function productRenderDetail(product) {
                     <button type="button"
                             class="product-action-button product-add-cart"
                             id="product-add-cart"
-                            ${product.stock <= 0 ? "disabled" : ""}>
+                            disabled>
                         THÊM VÀO GIỎ
                     </button>
 
                     <button type="button"
                             class="product-action-button product-buy-now"
                             id="product-buy-now"
-                            ${product.stock <= 0 ? "disabled" : ""}>
+                            disabled>
                         MUA NGAY
                     </button>
                 </div>
