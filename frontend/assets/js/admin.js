@@ -20,6 +20,7 @@
     let products = [];
     let categories = [];
     let activeVariantProduct = null;
+    let activeVariants = [];
 
     function alertMessage(message, error = false) {
         const box = $("admin-alert");
@@ -175,7 +176,8 @@
     async function renderVariants() {
         if (!activeVariantProduct) return;
         const data = await api("/products/" + activeVariantProduct.id + "/variants");
-        const variants = data.variants || [];
+        activeVariants = data.variants || [];
+        const variants = activeVariants;
         $("variants-table").innerHTML = variants.length ? variants.map(v => `
             <tr>
                 <td><strong>${escapeHtml(v.sku)}</strong></td>
@@ -190,20 +192,18 @@
     }
 
     function editVariant(variantId) {
-        const row = document.querySelector('[data-edit-variant="' + CSS.escape(String(variantId)) + '"]')?.closest("tr");
-        if (!row) return;
-        const cells = row.querySelectorAll("td");
+        const variant = activeVariants.find(item => String(item.id) === String(variantId));
+        if (!variant) return;
+
         const form = $("variant-form");
-        form.elements.variant_id.value = variantId;
-        form.elements.sku.value = cells[0].querySelector("strong")?.textContent || "";
-        form.elements.size.value = cells[1].textContent.trim() === "—" ? "" : cells[1].textContent.trim();
-        form.elements.color_name.value = cells[2].childNodes[0]?.textContent?.trim() || "";
-        const colorCode = cells[2].querySelector("small")?.textContent || "";
-        form.elements.color_code.value = colorCode;
-        const priceText = cells[3].textContent.trim();
-        form.elements.price.value = priceText === "Theo giá sản phẩm" ? "" : String(priceText.replace(/[^0-9]/g, ""));
-        form.elements.stock.value = cells[4].textContent.trim();
-        form.elements.status.value = cells[5].textContent.trim() === "Đang hoạt động" ? "active" : "inactive";
+        form.elements.variant_id.value = variant.id;
+        form.elements.sku.value = variant.sku || "";
+        form.elements.size.value = variant.size || "";
+        form.elements.color_name.value = variant.color_name || "";
+        form.elements.color_code.value = variant.color_code || "";
+        form.elements.price.value = variant.price === null ? "" : String(variant.price);
+        form.elements.stock.value = String(Number(variant.stock || 0));
+        form.elements.status.value = variant.status === "active" ? "active" : "inactive";
         $("variant-save-label").textContent = "Lưu thay đổi";
         form.scrollIntoView({ behavior: "smooth", block: "start" });
     }
