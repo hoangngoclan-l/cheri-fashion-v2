@@ -19,6 +19,7 @@
     };
     let products = [];
     let categories = [];
+    let activeVariantProduct = null;
 
     function alertMessage(message, error = false) {
         const box = $("admin-alert");
@@ -99,7 +100,7 @@
             const q = encodeURIComponent($("product-search").value.trim());
             const data = await api("/products?q=" + q);
             products = data.products || [];
-            $("products-table").innerHTML = products.length ? products.map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.product_code)}</td><td>${escapeHtml(p.category)}</td><td>${money(p.price)}</td><td>${p.stock}</td><td><span class="pill ${statusClass(p.status === "active" && Number(p.stock) <= 0 ? "out_of_stock" : p.status)}">${statusText(p.status === "active" && Number(p.stock) <= 0 ? "out_of_stock" : p.status)}</span></td><td><button class="table-action" data-edit-product="${p.id}">Sửa</button><button class="table-action" data-delete-product="${p.id}">Ngừng bán</button></td></tr>`).join("") : '<tr><td colspan="7" class="empty-row">Không tìm thấy sản phẩm.</td></tr>';
+            $("products-table").innerHTML = products.length ? products.map(p => `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.product_code)}</td><td>${escapeHtml(p.category)}</td><td>${money(p.price)}</td><td>${p.stock}</td><td><span class="pill ${statusClass(p.status === "active" && Number(p.stock) <= 0 ? "out_of_stock" : p.status)}">${statusText(p.status === "active" && Number(p.stock) <= 0 ? "out_of_stock" : p.status)}</span></td><td><button class="table-action" data-edit-product="${p.id}">Sửa</button><button class="table-action" data-variant-product="${p.id}">Biến thể</button><button class="table-action" data-delete-product="${p.id}">Ngừng bán</button></td></tr>`).join("") : '<tr><td colspan="7" class="empty-row">Không tìm thấy sản phẩm.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
 
@@ -149,6 +150,94 @@
         } catch (error) { alertMessage(error.message, true); }
     }
 
+
+    async function loadVariants(productId) {
+        const product = products.find(item => String(item.id) === String(productId));
+        if (!product) throw new Error("Không tìm thấy sản phẩm trong danh sách hiện tại.");
+        activeVariantProduct = product;
+        $("variant-dialog-title").textContent = "Biến thể · " + product.name;
+        $("variant-product-summary").textContent = product.product_code + " · Giá gốc " + money(product.price);
+        $("variant-form").reset();
+        $("variant-form").elements.product_id.value = product.id;
+        $("variant-form").elements.variant_id.value = "";
+        $("variant-form").elements.status.value = "active";
+        $("variant-form").elements.stock.value = "0";
+        $("variant-form").elements.price.value = "";
+        $("variant-form").elements.sku.value = "";
+        $("variant-form").elements.size.value = "";
+        $("variant-form").elements.color_name.value = "";
+        $("variant-form").elements.color_code.value = "";
+        $("variant-save-label").textContent = "Thêm biến thể";
+        await renderVariants();
+        $("variant-dialog").showModal();
+    }
+
+    async function renderVariants() {
+        if (!activeVariantProduct) return;
+        const data = await api("/products/" + activeVariantProduct.id + "/variants");
+        const variants = data.variants || [];
+        $("variants-table").innerHTML = variants.length ? variants.map(v => `
+            <tr>
+                <td><strong>${escapeHtml(v.sku)}</strong></td>
+                <td>${escapeHtml(v.size || "—")}</td>
+                <td>${escapeHtml(v.color_name || "—")}${v.color_code ? '<br><small>' + escapeHtml(v.color_code) + '</small>' : ''}</td>
+                <td>${v.price === null ? "Theo giá sản phẩm" : money(v.price)}</td>
+                <td>${Number(v.stock || 0)}</td>
+                <td><span class="pill ${statusClass(v.status)}">${statusText(v.status)}</span></td>
+                <td><button type="button" class="table-action" data-edit-variant="${v.id}">Sửa</button><button type="button" class="table-action" data-toggle-variant="${v.id}" data-next-status="${v.status === "active" ? "inactive" : "active"}">${v.status === "active" ? "Ngừng bán" : "Kích hoạt"}</button></td>
+            </tr>`).join("") : '<tr><td colspan="7" class="empty-row">Sản phẩm chưa có biến thể. Chỉ thêm size, màu và SKU đã được xác định thực tế.</td></tr>';
+        $("variant-count").textContent = variants.length + " biến thể";
+    }
+
+    function editVariant(variantId) {
+        const row = document.querySelector('[data-edit-variant="' + CSS.escape(String(variantId)) + '"]')?.closest("tr");
+        if (!row) return;
+        const cells = row.querySelectorAll("td");
+        const form = $("variant-form");
+        form.elements.variant_id.value = variantId;
+        form.elements.sku.value = cells[0].querySelector("strong")?.textContent || "";
+        form.elements.size.value = cells[1].textContent.trim() === "—" ? "" : cells[1].textContent.trim();
+        form.elements.color_name.value = cells[2].childNodes[0]?.textContent?.trim() || "";
+        const colorCode = cells[2].querySelector("small")?.textContent || "";
+        form.elements.color_code.value = colorCode;
+        const priceText = cells[3].textContent.trim();
+        form.elements.price.value = priceText === "Theo giá sản phẩm" ? "" : String(priceText.replace(/[^0-9]/g, ""));
+        form.elements.stock.value = cells[4].textContent.trim();
+        form.elements.status.value = cells[5].textContent.trim() === "Đang hoạt động" ? "active" : "inactive";
+        $("variant-save-label").textContent = "Lưu thay đổi";
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    async function saveVariant(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const body = {
+            sku: form.elements.sku.value.trim(),
+            size: form.elements.size.value.trim() || null,
+            color_name: form.elements.color_name.value.trim() || null,
+            color_code: form.elements.color_code.value.trim() || null,
+            price: form.elements.price.value === "" ? null : Number(form.elements.price.value),
+            stock: Number(form.elements.stock.value),
+            status: form.elements.status.value
+        };
+        const variantId = form.elements.variant_id.value;
+        try {
+            await api("/products/" + activeVariantProduct.id + "/variants" + (variantId ? "/" + variantId : ""), {
+                method: variantId ? "PUT" : "POST",
+                body: JSON.stringify(body)
+            });
+            alertMessage(variantId ? "Đã cập nhật biến thể." : "Đã thêm biến thể.");
+            form.reset();
+            form.elements.product_id.value = activeVariantProduct.id;
+            form.elements.variant_id.value = "";
+            form.elements.status.value = "active";
+            form.elements.stock.value = "0";
+            $("variant-save-label").textContent = "Thêm biến thể";
+            await renderVariants();
+            await loadProducts();
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
     async function loadOrders() {
         try {
             const q = encodeURIComponent($("order-search").value.trim());
@@ -179,11 +268,42 @@
         $("close-product-dialog").addEventListener("click", () => $("product-dialog").close());
         $("cancel-product").addEventListener("click", () => $("product-dialog").close());
         $("product-form").addEventListener("submit", saveProduct);
+        $("variant-form").addEventListener("submit", saveVariant);
+        $("close-variant-dialog").addEventListener("click", () => $("variant-dialog").close());
+        $("cancel-variant-dialog").addEventListener("click", () => $("variant-dialog").close());
+        $("add-variant").addEventListener("click", () => {
+            const form = $("variant-form");
+            form.reset();
+            form.elements.product_id.value = activeVariantProduct?.id || "";
+            form.elements.variant_id.value = "";
+            form.elements.status.value = "active";
+            form.elements.stock.value = "0";
+            $("variant-save-label").textContent = "Thêm biến thể";
+        });
         document.addEventListener("click", async event => {
             const edit = event.target.closest("[data-edit-product]");
+            const variants = event.target.closest("[data-variant-product]");
+            const editVariantButton = event.target.closest("[data-edit-variant]");
+            const toggleVariantButton = event.target.closest("[data-toggle-variant]");
             const remove = event.target.closest("[data-delete-product]");
             const customer = event.target.closest("[data-customer-id]");
             if (edit) openProduct(products.find(p => String(p.id) === edit.dataset.editProduct));
+            if (variants) {
+                try { await loadVariants(variants.dataset.variantProduct); }
+                catch (error) { alertMessage(error.message, true); }
+            }
+            if (editVariantButton) editVariant(editVariantButton.dataset.editVariant);
+            if (toggleVariantButton && activeVariantProduct) {
+                const nextStatus = toggleVariantButton.dataset.nextStatus;
+                if (confirm(nextStatus === "inactive" ? "Ngừng bán biến thể này? Biến thể sẽ không còn được chọn mua." : "Kích hoạt lại biến thể này?")) {
+                    try {
+                        await api("/products/" + activeVariantProduct.id + "/variants/" + toggleVariantButton.dataset.toggleVariant + "/status", { method: "PATCH", body: JSON.stringify({ status: nextStatus }) });
+                        alertMessage("Đã cập nhật trạng thái biến thể.");
+                        await renderVariants();
+                        await loadProducts();
+                    } catch (error) { alertMessage(error.message, true); }
+                }
+            }
             if (remove && confirm("Ngừng kinh doanh sản phẩm này?")) {
                 try { await api("/products/" + remove.dataset.deleteProduct, { method: "DELETE" }); alertMessage("Đã ngừng kinh doanh sản phẩm."); loadProducts(); }
                 catch (error) { alertMessage(error.message, true); }
