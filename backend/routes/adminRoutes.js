@@ -456,13 +456,13 @@ router.patch("/orders/:id/status", async (req, res) => {
                     }
 
                     await connection.execute(
-                        \`UPDATE products
+                        `UPDATE products
                          SET stock = (
                            SELECT COALESCE(SUM(stock), 0)
                            FROM product_variants
                            WHERE product_id = ? AND status = 'active'
                          )
-                         WHERE id = ?\`,
+                         WHERE id = ?`,
                         [item.product_id, item.product_id]
                     );
                 } else {
