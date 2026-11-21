@@ -349,8 +349,21 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
         if (variant.price !== null && variant.price !== undefined) {
           unitPrice = Number(variant.price);
         }
-      } else if (Number(product.stock) < item.quantity) {
-        throw new Error(`Sản phẩm "${product.name}" không đủ số lượng trong kho.`);
+      } else {
+        // Legacy products without variants remain supported.
+        // Products with active variants must be checked out with a selected variant.
+        const [activeVariants] = await connection.execute(
+          "SELECT id FROM product_variants WHERE product_id = ? AND status = 'active' LIMIT 1",
+          [item.productId]
+        );
+
+        if (activeVariants.length) {
+          throw new Error(`Vui lòng chọn kích thước và màu sắc cho sản phẩm "${product.name}" trước khi đặt hàng.`);
+        }
+
+        if (Number(product.stock) < item.quantity) {
+          throw new Error(`Sản phẩm "${product.name}" không đủ số lượng trong kho.`);
+        }
       }
 
       if (!Number.isFinite(unitPrice) || unitPrice < 0) {
