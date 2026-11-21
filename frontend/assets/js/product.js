@@ -348,7 +348,8 @@ function productBindControls() {
     });
 
     function setQuantity(value) {
-        const max = Math.max(1, currentProduct.stock);
+        const selectedVariant = currentProduct?.variants?.find(item => item.id === selectedVariantId);
+        const max = Math.max(1, selectedVariant?.stock || 1);
         productQuantity = Math.min(max, Math.max(1, Math.floor(Number(value) || 1)));
 
         if (quantityInput) {
@@ -394,6 +395,10 @@ function productSyncSelectedVariant() {
     }
     productQuantity = Math.min(productQuantity, Math.max(1, stock));
     if (quantityInput) quantityInput.value = String(productQuantity);
+    const priceElement = document.querySelector(".product-current-price");
+    if (priceElement && variant) {
+        priceElement.textContent = productFormatPrice(variant.price ?? currentProduct.price);
+    }
     const stockElement = document.querySelector(".product-stock");
     if (stockElement) {
         stockElement.textContent = variant && stock > 0 ? `Còn hàng · ${stock} sản phẩm` : "Biến thể này hiện đã hết hàng hoặc không tồn tại";
