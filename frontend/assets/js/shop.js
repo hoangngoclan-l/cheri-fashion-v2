@@ -866,7 +866,7 @@ function openShopVariantModal(product, action) {
     quantityInput.max = String(Math.max(1, Math.min(99, product.stock)));
     sizeSelect.disabled = product.variants.length === 0;
     colorSelect.disabled = product.variants.length === 0;
-    confirmButton.disabled = product.variants.length === 0;
+    confirmButton.disabled = true;
     if (!product.variants.length) {
         error.textContent = "Sản phẩm chưa có biến thể được cấu hình. Vui lòng quay lại sau.";
         error.hidden = false;
