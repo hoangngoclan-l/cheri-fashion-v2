@@ -15,6 +15,18 @@ function positiveId(value) {
     return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
+async function syncProductStock(productId, executor = pool) {
+    await executor.execute(`
+        UPDATE products
+        SET stock = (
+            SELECT COALESCE(SUM(stock), 0)
+            FROM product_variants
+            WHERE product_id = ? AND status = 'active'
+        )
+        WHERE id = ?
+    `, [productId, productId]);
+}
+
 function sendError(res, error, message) {
     console.error(message, error);
     return res.status(500).json({ success: false, message });
@@ -242,6 +254,7 @@ router.post('/products/:id/variants', async (req, res) => {
         const [products] = await pool.execute('SELECT id FROM products WHERE id = ? LIMIT 1', [productId]);
         if (!products.length) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
         const [result] = await pool.execute('INSERT INTO product_variants (product_id, sku, size, color_name, color_code, price, stock, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [productId, sku, size, colorName, colorCode, price, stock, status]);
+        await syncProductStock(productId);
         return res.status(201).json({ success: true, variantId: result.insertId, message: 'Đã tạo biến thể.' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
@@ -270,6 +283,7 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
             const [existing] = await pool.execute('SELECT id FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
             if (!existing.length) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
         }
+        await syncProductStock(productId);
         return res.json({ success: true, message: 'Đã cập nhật biến thể.' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
@@ -286,6 +300,7 @@ router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
     try {
         const [result] = await pool.execute('UPDATE product_variants SET status=? WHERE id=? AND product_id=?', [status, variantId, productId]);
         if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        await syncProductStock(productId);
         return res.json({ success: true, message: 'Đã cập nhật trạng thái biến thể.' });
     } catch (error) { return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.'); }
 });
