@@ -212,6 +212,83 @@ router.delete("/products/:id", async (req, res) => {
     }
 });
 
+// GET /api/admin/products/:id/variants - danh sách biến thể của sản phẩm.
+router.get('/products/:id/variants', async (req, res) => {
+    const productId = positiveId(req.params.id);
+    if (!productId) return res.status(400).json({ success: false, message: 'ID sản phẩm không hợp lệ.' });
+    try {
+        const [products] = await pool.execute('SELECT id FROM products WHERE id = ? LIMIT 1', [productId]);
+        if (!products.length) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+        const [variants] = await pool.execute('SELECT id, product_id, sku, size, color_name, color_code, price, stock, status, created_at FROM product_variants WHERE product_id = ? ORDER BY id ASC', [productId]);
+        return res.json({ success: true, variants });
+    } catch (error) { return sendError(res, error, 'Không thể tải biến thể sản phẩm.'); }
+});
+
+// POST /api/admin/products/:id/variants - tạo biến thể, không tự sinh size/màu.
+router.post('/products/:id/variants', async (req, res) => {
+    const productId = positiveId(req.params.id);
+    const body = req.body || {};
+    const sku = String(body.sku || '').trim();
+    const size = String(body.size || '').trim() || null;
+    const colorName = String(body.color_name || '').trim() || null;
+    const colorCode = String(body.color_code || '').trim() || null;
+    const price = body.price === '' || body.price === null || body.price === undefined ? null : Number(body.price);
+    const stock = Number(body.stock);
+    const status = String(body.status || 'active');
+    if (!productId || !sku || sku.length > 80 || (size && size.length > 40) || (colorName && colorName.length > 80) || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
+    }
+    try {
+        const [products] = await pool.execute('SELECT id FROM products WHERE id = ? LIMIT 1', [productId]);
+        if (!products.length) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+        const [result] = await pool.execute('INSERT INTO product_variants (product_id, sku, size, color_name, color_code, price, stock, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [productId, sku, size, colorName, colorCode, price, stock, status]);
+        return res.status(201).json({ success: true, variantId: result.insertId, message: 'Đã tạo biến thể.' });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
+        return sendError(res, error, 'Không thể tạo biến thể.');
+    }
+});
+
+// PUT /api/admin/products/:id/variants/:variantId - cập nhật biến thể.
+router.put('/products/:id/variants/:variantId', async (req, res) => {
+    const productId = positiveId(req.params.id);
+    const variantId = positiveId(req.params.variantId);
+    const body = req.body || {};
+    const sku = String(body.sku || '').trim();
+    const size = String(body.size || '').trim() || null;
+    const colorName = String(body.color_name || '').trim() || null;
+    const colorCode = String(body.color_code || '').trim() || null;
+    const price = body.price === '' || body.price === null || body.price === undefined ? null : Number(body.price);
+    const stock = Number(body.stock);
+    const status = String(body.status || 'active');
+    if (!productId || !variantId || !sku || sku.length > 80 || (size && size.length > 40) || (colorName && colorName.length > 80) || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
+        return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
+    }
+    try {
+        const [result] = await pool.execute('UPDATE product_variants SET sku=?, size=?, color_name=?, color_code=?, price=?, stock=?, status=? WHERE id=? AND product_id=?', [sku, size, colorName, colorCode, price, stock, status, variantId, productId]);
+        if (!result.affectedRows) {
+            const [existing] = await pool.execute('SELECT id FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
+            if (!existing.length) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        }
+        return res.json({ success: true, message: 'Đã cập nhật biến thể.' });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
+        return sendError(res, error, 'Không thể cập nhật biến thể.');
+    }
+});
+
+// PATCH /api/admin/products/:id/variants/:variantId/status - ngừng bán mềm.
+router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
+    const productId = positiveId(req.params.id);
+    const variantId = positiveId(req.params.variantId);
+    const status = String(req.body.status || '').trim();
+    if (!productId || !variantId || !PRODUCT_STATUSES.includes(status)) return res.status(400).json({ success: false, message: 'Biến thể hoặc trạng thái không hợp lệ.' });
+    try {
+        const [result] = await pool.execute('UPDATE product_variants SET status=? WHERE id=? AND product_id=?', [status, variantId, productId]);
+        if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        return res.json({ success: true, message: 'Đã cập nhật trạng thái biến thể.' });
+    } catch (error) { return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.'); }
+});
 // GET /api/admin/orders
 router.get("/orders", async (req, res) => {
     try {
