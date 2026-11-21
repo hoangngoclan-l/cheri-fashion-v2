@@ -127,6 +127,10 @@ function bindShopEvents() {
     document.getElementById("shop-variant-form")
         ?.addEventListener("submit", confirmShopVariant);
 
+    ["shop-modal-size", "shop-modal-color"].forEach(id => {
+        document.getElementById(id)?.addEventListener("change", updateShopSelectedVariant);
+    });
+
     document.querySelectorAll("[data-close-variant]")
         .forEach(element => {
             element.addEventListener("click", closeShopVariantModal);
@@ -868,9 +872,6 @@ function openShopVariantModal(product, action) {
         error.hidden = false;
     }
 
-    error.hidden = true;
-    error.textContent = "";
-
     confirmButton.textContent =
         action === "buy" ? "MUA NGAY" : "THÊM VÀO GIỎ";
 
@@ -884,6 +885,26 @@ function openShopVariantModal(product, action) {
 /* =========================================================
    16. ĐÓNG CỬA SỔ CHỌN BIẾN THỂ
    ========================================================= */
+
+function updateShopSelectedVariant() {
+    if (!shopSelectedProduct) return;
+    const size = document.getElementById("shop-modal-size")?.value || "";
+    const color = document.getElementById("shop-modal-color")?.value || "";
+    const variant = shopSelectedProduct.variants.find(item =>
+        item.size === size && item.colorName === color
+    );
+    const price = document.getElementById("shop-modal-price");
+    const quantity = document.getElementById("shop-modal-quantity");
+    const confirm = document.getElementById("shop-variant-confirm");
+    if (variant) {
+        if (price) price.textContent = formatShopPrice(variant.price ?? shopSelectedProduct.price);
+        if (quantity) {
+            quantity.max = String(Math.max(1, Math.min(99, variant.stock)));
+            quantity.value = String(Math.min(Number(quantity.value) || 1, Math.max(1, variant.stock)));
+        }
+    }
+    if (confirm) confirm.disabled = !variant || variant.stock < 1;
+}
 
 function closeShopVariantModal() {
     const modal = document.getElementById("shop-variant-modal");
@@ -959,7 +980,7 @@ async function confirmShopVariant(event) {
         quantity > selectedVariant.stock
     ) {
         error.textContent =
-            `Số lượng phải từ 1 đến ${product.stock}.`;
+            `Số lượng phải từ 1 đến ${selectedVariant.stock}.`;
 
         error.hidden = false;
         return;
