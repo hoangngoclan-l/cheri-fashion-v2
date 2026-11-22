@@ -9,6 +9,8 @@
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[char]));
     const statusText = value => ({pending:"Chờ xác nhận",confirmed:"Đã xác nhận",processing:"Đang xử lý",shipping:"Đang giao",completed:"Đã hoàn thành",cancelled:"Đã hủy",active:"Đang hoạt động",inactive:"Ngừng hoạt động",blocked:"Đã khóa",out_of_stock:"Hết hàng"})[value] || value || "—";
     const statusClass = value => ["completed","active"].includes(value) ? "success" : ["pending","confirmed","processing","shipping"].includes(value) ? "warn" : ["cancelled","blocked","inactive","out_of_stock"].includes(value) ? "danger" : "";
+    const paymentStatusText = value => ({unpaid:"Chưa thanh toán",paid:"Đã thanh toán",pending:"Đang xử lý",failed:"Thanh toán thất bại",refunded:"Đã hoàn tiền",partially_refunded:"Hoàn tiền một phần"})[value] || value || "Chưa rõ";
+    const paymentStatusClass = value => value === "paid" ? "success" : value === "unpaid" ? "warn" : ["failed","refunded"].includes(value) ? "danger" : "";
     const ORDER_TRANSITIONS = {
         pending: ["confirmed", "cancelled"],
         confirmed: ["processing", "cancelled"],
@@ -243,7 +245,7 @@
             const q = encodeURIComponent($("order-search").value.trim());
             const status = encodeURIComponent($("order-status").value);
             const data = await api("/orders?q=" + q + "&status=" + status);
-            $("orders-table").innerHTML = data.orders.length ? data.orders.map(o => `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(o.recipient_name)}</td><td>${escapeHtml(o.phone)}</td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td><td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td><td><select aria-label="Trạng thái đơn ${escapeHtml(o.order_code)}" data-order-status="${o.id}">${[o.order_status, ...(ORDER_TRANSITIONS[o.order_status] || [])].map(s => `<option value="${s}" ${s === o.order_status ? "selected" : ""}>${statusText(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="7" class="empty-row">Không có đơn hàng phù hợp.</td></tr>';
+            $("orders-table").innerHTML = data.orders.length ? data.orders.map(o => `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(o.recipient_name)}</td><td>${escapeHtml(o.phone)}</td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td><td><span class="pill ${paymentStatusClass(o.payment_status)}">${escapeHtml(paymentStatusText(o.payment_status))}</span></td><td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td><td><select aria-label="Trạng thái đơn ${escapeHtml(o.order_code)}" data-order-status="${o.id}">${[o.order_status, ...(ORDER_TRANSITIONS[o.order_status] || [])].map(s => `<option value="${s}" ${s === o.order_status ? "selected" : ""}>${statusText(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="7" class="empty-row">Không có đơn hàng phù hợp.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
 
