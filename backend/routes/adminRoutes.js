@@ -46,6 +46,7 @@ function auditDescription(method, path) {
     if (route.includes("/variants")) return [method === "POST" ? "create_variant" : "update_variant", "product_variant", "Thay đổi biến thể sản phẩm"];
     if (route.includes("/products")) return [method === "POST" ? "create_product" : method === "DELETE" ? "archive_product" : "update_product", "product", "Thay đổi sản phẩm"];
     if (route.includes("/customers/")) return ["change_customer_status", "customer", "Cập nhật trạng thái tài khoản khách hàng"];
+    if (route.includes("/reviews/")) return ["moderate_review", "product_review", "Kiểm duyệt đánh giá sản phẩm"];
     return ["admin_mutation", "admin", "Thao tác quản trị"];
 }
 
@@ -1607,6 +1608,90 @@ router.patch("/customers/:id/status", async (req, res) => {
             }
         }
         return sendError(res, error, "Không thể cập nhật khách hàng.");
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+
+// GET /api/admin/reviews — danh sách đánh giá để kiểm duyệt.
+router.get("/reviews", async (req, res) => {
+    const status = String(req.query.status || "").trim();
+    const q = String(req.query.q || "").trim().slice(0, 100);
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 20));
+    const clauses = [];
+    const params = [];
+    if (["pending", "approved", "rejected"].includes(status)) {
+        clauses.push("r.status = ?");
+        params.push(status);
+    }
+    if (q) {
+        clauses.push("(p.name LIKE ? OR u.full_name LIKE ? OR u.email LIKE ? OR r.content LIKE ?)");
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    const where = clauses.length ? "WHERE " + clauses.join(" AND ") : "";
+    try {
+        const [[count]] = await pool.execute(
+            `SELECT COUNT(*) AS total FROM product_reviews r
+             INNER JOIN products p ON p.id = r.product_id
+             INNER JOIN users u ON u.id = r.user_id ${where}`,
+            params
+        );
+        const [reviews] = await pool.execute(
+            `SELECT r.id, r.product_id, p.name AS product_name, r.order_id,
+                    r.order_item_id, r.rating, r.content, r.status, r.created_at,
+                    r.moderated_at, u.full_name AS customer_name, u.email AS customer_email
+             FROM product_reviews r
+             INNER JOIN products p ON p.id = r.product_id
+             INNER JOIN users u ON u.id = r.user_id
+             ${where}
+             ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END,
+                      r.created_at DESC, r.id DESC
+             LIMIT ? OFFSET ?`,
+            [...params, limit, (page - 1) * limit]
+        );
+        return res.json({
+            success: true,
+            reviews,
+            pagination: { page, limit, total: Number(count.total), totalPages: Math.ceil(Number(count.total) / limit) }
+        });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải danh sách đánh giá.");
+    }
+});
+
+// PATCH /api/admin/reviews/:id/status — duyệt hoặc từ chối đánh giá.
+router.patch("/reviews/:id/status", async (req, res) => {
+    const reviewId = positiveId(req.params.id);
+    const status = String(req.body.status || "").trim();
+    if (!reviewId || !["approved", "rejected"].includes(status)) {
+        return res.status(400).json({ success: false, message: "Thông tin kiểm duyệt đánh giá không hợp lệ." });
+    }
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [rows] = await connection.execute(
+            "SELECT id, status FROM product_reviews WHERE id = ? FOR UPDATE",
+            [reviewId]
+        );
+        if (!rows.length) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá." });
+        }
+        await connection.execute(
+            "UPDATE product_reviews SET status = ?, moderated_by = ?, moderated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            [status, req.user.id, reviewId]
+        );
+        await connection.commit();
+        return res.json({
+            success: true,
+            message: status === "approved" ? "Đã duyệt đánh giá." : "Đã từ chối đánh giá."
+        });
+    } catch (error) {
+        if (connection) await connection.rollback().catch(() => {});
+        return sendError(res, error, "Không thể cập nhật trạng thái đánh giá.");
     } finally {
         if (connection) connection.release();
     }
