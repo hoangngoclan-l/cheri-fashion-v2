@@ -56,7 +56,7 @@ async function addMessage(executor, conversationId, senderType, content, senderU
     );
 }
 async function getProductContext(message) {
-    const terms = [...new Set(message.toLowerCase().replace(/[^\\p{L}\\p{N} ]/gu, " ").split(/\\s+/).filter(word => word.length >= 3))].slice(0, 6);
+    const terms = [...new Set(message.toLowerCase().replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(word => word.length >= 3))].slice(0, 6);
     const where = ["p.status = 'active'"];
     const params = [];
     if (terms.length) {
