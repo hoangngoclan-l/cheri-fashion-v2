@@ -61,11 +61,12 @@
     function setView(view) {
         document.querySelectorAll(".admin-view").forEach(el => el.classList.toggle("active", el.id === "view-" + view));
         document.querySelectorAll(".admin-nav a").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh","activity-logs":"Nhật ký hoạt động"})[view] || "Quản trị";
+        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh",reviews:"Kiểm duyệt đánh giá","activity-logs":"Nhật ký hoạt động"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
         if (view === "products") { loadProducts(); loadCategoryManagement(); }
         if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
+        if (view === "reviews") loadReviews();
         if (view === "inventory") { loadInventoryProducts(); loadInventory(); }
         if (view === "reports") loadReports();
         if (view === "activity-logs") loadActivityLogs();
@@ -174,6 +175,37 @@
             $("activity-page-label").textContent = `Trang ${data.pagination.page} / ${Math.max(1,data.pagination.totalPages)} · ${data.pagination.total} bản ghi`;
             $("activity-prev").disabled = activityPage <= 1;
             $("activity-next").disabled = activityPage >= data.pagination.totalPages;
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    async function loadReviews() {
+        try {
+            const params = new URLSearchParams({
+                status: $("review-admin-status").value,
+                q: $("review-admin-search").value.trim(),
+                page: "1",
+                limit: "50"
+            });
+            const data = await api("/reviews?" + params.toString());
+            $("admin-reviews-table").innerHTML = data.reviews.length ? data.reviews.map(review => {
+                const status = review.status;
+                const statusLabel = ({pending:"Chờ duyệt",approved:"Đã duyệt",rejected:"Đã từ chối"})[status] || status;
+                const statusTone = status === "approved" ? "success" : status === "rejected" ? "danger" : "warn";
+                const actionButtons = status === "pending"
+                    ? `<button class="button button-primary" data-review-status="approved" data-review-id="${Number(review.id)}">Duyệt</button> <button class="button button-light" data-review-status="rejected" data-review-id="${Number(review.id)}">Từ chối</button>`
+                    : status === "approved"
+                        ? `<button class="button button-light" data-review-status="rejected" data-review-id="${Number(review.id)}">Gỡ hiển thị</button>`
+                        : `<button class="button button-light" data-review-status="approved" data-review-id="${Number(review.id)}">Duyệt lại</button>`;
+                return `<tr>
+                    <td>${new Date(review.created_at).toLocaleString("vi-VN")}</td>
+                    <td><strong>${escapeHtml(review.product_name)}</strong><br><small>Đơn #${Number(review.order_id)}</small></td>
+                    <td>${escapeHtml(review.customer_name)}<br><small>${escapeHtml(review.customer_email)}</small></td>
+                    <td><strong>${"★".repeat(Number(review.rating))}${"☆".repeat(5 - Number(review.rating))}</strong></td>
+                    <td class="activity-detail-cell">${escapeHtml(review.content)}</td>
+                    <td><span class="pill ${statusTone}">${statusLabel}</span></td>
+                    <td>${actionButtons}</td>
+                </tr>`;
+            }).join("") : '<tr><td colspan="7" class="empty-row">Không có đánh giá phù hợp.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
 
@@ -727,6 +759,29 @@
             }
             try { await api("/orders/" + select.dataset.orderStatus + "/status", { method: "PATCH", body: JSON.stringify({ status: select.value }) }); alertMessage("Đã cập nhật trạng thái đơn hàng."); loadOrders(); }
             catch (error) { alertMessage(error.message, true); loadOrders(); }
+        });
+        $("review-admin-filter")?.addEventListener("submit", event => {
+            event.preventDefault();
+            loadReviews();
+        });
+        $("admin-reviews-table")?.addEventListener("click", async event => {
+            const button = event.target.closest("[data-review-status]");
+            if (!button) return;
+            const next = button.dataset.reviewStatus;
+            const message = next === "approved" ? "Duyệt và cho phép hiển thị đánh giá này?" : "Từ chối hoặc gỡ hiển thị đánh giá này?";
+            if (!confirm(message)) return;
+            button.disabled = true;
+            try {
+                const result = await api("/reviews/" + button.dataset.reviewId + "/status", {
+                    method: "PATCH",
+                    body: JSON.stringify({ status: next })
+                });
+                alertMessage(result.message);
+                await loadReviews();
+            } catch (error) {
+                alertMessage(error.message, true);
+                button.disabled = false;
+            }
         });
         const today = new Date();
         const toIso = value => { const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 10); };
