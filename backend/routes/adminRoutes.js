@@ -37,7 +37,7 @@ router.use((req, res, next) => {
         const [action, entityType, description] = auditDescription(req.method, req.path);
         const variantMatch = req.path.match(/\/variants\/(\d+)(?:\/|$)/);
         const match = req.path.match(/\/(\d+)(?:\/|$)/);
-        const entityId = Number(payload.variantId) || (variantMatch ? Number(variantMatch[1]) :
+        const entityId = Number(payload.variantId || payload.productId || payload.categoryId || payload.orderId) || (variantMatch ? Number(variantMatch[1]) :
             (match ? Number(match[1]) : (entityType === "inventory" ? Number(req.body?.variant_id || req.body?.product_id) || null : null)));
         const safeDetails = {};
         for (const [key, value] of Object.entries(req.body || {})) {
