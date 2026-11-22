@@ -405,7 +405,7 @@ router.patch("/orders/:id/status", async (req, res) => {
         transactionStarted = true;
 
         const [orders] = await connection.execute(
-            "SELECT id, order_status FROM orders WHERE id = ? FOR UPDATE",
+            "SELECT id, order_status, payment_status FROM orders WHERE id = ? FOR UPDATE",
             [id]
         );
 
@@ -444,6 +444,17 @@ router.patch("/orders/:id/status", async (req, res) => {
             return res.status(409).json({
                 success: false,
                 message: `Không thể chuyển đơn từ "${current}" sang "${status}".`
+            });
+        }
+
+        // Không hủy đơn đã thanh toán nếu hệ thống chưa có quy trình hoàn tiền.
+        // Việc hoàn kho không đồng nghĩa với việc hoàn tiền cho khách hàng.
+        if (status === "cancelled" && orders[0].payment_status !== "unpaid") {
+            await rollbackTransaction();
+
+            return res.status(409).json({
+                success: false,
+                message: "Đơn hàng không còn ở trạng thái chưa thanh toán. Cần đối soát và xử lý hoàn tiền trước khi hủy."
             });
         }
 
