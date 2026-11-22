@@ -219,20 +219,22 @@ router.post("/products", async (req, res) => {
         !Number.isSafeInteger(stock) || stock < 0 || !PRODUCT_STATUSES.includes(status)) {
         return res.status(400).json({ success: false, message: "Dữ liệu sản phẩm không hợp lệ." });
     }
+    let connection;
     try {
-        const [[categoryRow]] = await pool.execute(
-            "SELECT id, name, slug FROM categories WHERE id = ? AND is_active = 1 LIMIT 1",
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [[categoryRow]] = await connection.execute(
+            "SELECT id, name, slug FROM categories WHERE id = ? AND is_active = 1 LIMIT 1 FOR UPDATE",
             [categoryId]
         );
-
         if (!categoryRow) {
+            await connection.rollback();
             return res.status(400).json({
                 success: false,
                 message: "Danh mục không tồn tại hoặc đã ngừng hoạt động."
             });
         }
-
-        const [result] = await pool.execute(`
+        const [result] = await connection.execute(`
             INSERT INTO products (product_code, name, category, category_slug, price, old_price, image, description, is_new, is_sale, stock, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
@@ -242,12 +244,23 @@ router.post("/products", async (req, res) => {
             body.is_new ? 1 : 0, body.is_sale ? 1 : 0, stock,
             status
         ]);
-        return res.status(201).json({ success: true, productId: result.insertId, message: "Đã tạo sản phẩm." });
+        if (stock > 0) {
+            await connection.execute(`
+                INSERT INTO inventory_movements
+                  (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, note, actor_user_id)
+                VALUES (?, NULL, 'adjustment_in', ?, 0, ?, 'opening_balance', ?, ?)
+            `, [result.insertId, stock, stock, "Tồn kho khởi tạo khi tạo sản phẩm", req.user?.id || null]);
+        }
+        await connection.commit();
+        return res.status(201).json({ success: true, productId: result.insertId, message: "Đã tạo sản phẩm và ghi nhận tồn kho khởi tạo." });
     } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (_) {} }
         if (error.code === "ER_DUP_ENTRY") {
             return res.status(409).json({ success: false, message: "Mã sản phẩm đã tồn tại." });
         }
         return sendError(res, error, "Không thể tạo sản phẩm.");
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -374,15 +387,35 @@ router.post('/products/:id/variants', async (req, res) => {
     if (!productId || !sku || !size || !colorName || sku.length > 80 || size.length > 40 || colorName.length > 80 || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
     }
+    let connection;
     try {
-        const [products] = await pool.execute('SELECT id FROM products WHERE id = ? LIMIT 1', [productId]);
-        if (!products.length) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
-        const [result] = await pool.execute('INSERT INTO product_variants (product_id, sku, size, color_name, color_code, price, stock, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', [productId, sku, size, colorName, colorCode, price, stock, status]);
-        await syncProductStock(productId);
-        return res.status(201).json({ success: true, variantId: result.insertId, message: 'Đã tạo biến thể.' });
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [products] = await connection.execute('SELECT id FROM products WHERE id = ? LIMIT 1 FOR UPDATE', [productId]);
+        if (!products.length) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+        }
+        const [result] = await connection.execute(
+            'INSERT INTO product_variants (product_id, sku, size, color_name, color_code, price, stock, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [productId, sku, size, colorName, colorCode, price, stock, status]
+        );
+        if (stock > 0) {
+            await connection.execute(`
+                INSERT INTO inventory_movements
+                  (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, note, actor_user_id)
+                VALUES (?, ?, 'adjustment_in', ?, 0, ?, 'opening_balance', ?, ?)
+            `, [productId, result.insertId, stock, stock, "Tồn kho khởi tạo khi tạo biến thể", req.user?.id || null]);
+        }
+        await syncProductStock(productId, connection);
+        await connection.commit();
+        return res.status(201).json({ success: true, variantId: result.insertId, message: 'Đã tạo biến thể và ghi nhận tồn kho khởi tạo.' });
     } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (_) {} }
         if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
         return sendError(res, error, 'Không thể tạo biến thể.');
+    } finally {
+        if (connection) connection.release();
     }
 });
 
