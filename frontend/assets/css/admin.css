@@ -18,3 +18,19 @@
 
 .variant-dialog form{padding:0}.variant-dialog-content{padding:26px;max-height:88vh;overflow:auto}.variant-summary{margin:7px 0 0;color:var(--muted);font-size:11px}.variant-list-heading,.variant-form-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 10px;font-size:12px}.variant-table-wrap{border:1px solid var(--line);border-radius:9px;margin-bottom:18px}.variant-form{border-top:1px solid var(--line);padding-top:8px}.variant-form-heading{margin-bottom:14px}.variant-form .form-grid{margin-top:10px}
 @media(max-width:700px){.variant-dialog-content{padding:17px}.variant-form-heading{align-items:flex-start;flex-direction:column}}
+
+.order-detail-dialog{width:min(900px,calc(100% - 28px))}
+.order-detail-content{padding:26px;max-height:88vh;overflow:auto}
+.order-detail-meta{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.order-detail-meta>div{display:grid;gap:5px;padding:11px 13px;border:1px solid var(--line);border-radius:9px;min-width:0}
+.order-detail-meta span,.order-detail-totals span{color:var(--muted);font-size:10px}
+.order-detail-meta strong{font-size:12px;overflow-wrap:anywhere}
+.order-detail-section-title{margin:18px 0 10px;font:600 16px 'Playfair Display',serif}
+.order-detail-table-wrap{border:1px solid var(--line);border-radius:9px}
+.detail-subline{display:block;margin-top:5px;color:var(--muted);font-size:9px}
+.order-detail-totals{display:grid;gap:8px;max-width:340px;margin:18px 0 0 auto}
+.order-detail-totals>div{display:flex;justify-content:space-between;gap:16px;font-size:11px}
+.order-detail-totals .detail-grand-total{padding-top:10px;border-top:1px solid var(--line);font-size:13px}
+.order-detail-note{margin-top:20px;padding:13px;border-radius:9px;background:var(--canvas)}
+.order-detail-note strong{font-size:11px}.order-detail-note p{margin:7px 0 0;color:var(--muted);font-size:11px;white-space:pre-wrap}
+@media(max-width:700px){.order-detail-content{padding:17px}.order-detail-meta{grid-template-columns:1fr}}
