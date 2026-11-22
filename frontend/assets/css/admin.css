@@ -56,3 +56,14 @@
 .category-form-actions{display:flex;gap:8px;align-items:center}
 .category-management code{font-size:11px;color:var(--muted)}
 @media(max-width:760px){.category-form{grid-template-columns:1fr}.category-form-actions{flex-wrap:wrap}}
+
+.customer-detail-dialog{width:min(920px,calc(100vw - 28px))}
+.customer-detail-content{padding:20px}
+.customer-detail-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0 22px}
+.customer-detail-summary>div{display:grid;gap:5px;padding:11px;border:1px solid var(--line);border-radius:8px;min-width:0}
+.customer-detail-summary span,.customer-orders-heading span{font-size:10px;color:var(--muted)}
+.customer-detail-summary strong{font-size:12px;overflow-wrap:anywhere}
+.customer-orders-heading{display:flex;align-items:center;justify-content:space-between;margin:8px 0 10px}
+.customer-orders-heading h3{margin:0;font-size:14px}
+.customer-name-action{padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:650;text-align:left;cursor:pointer}
+@media(max-width:680px){.customer-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-detail-content{padding:14px}}
