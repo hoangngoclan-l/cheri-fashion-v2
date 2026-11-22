@@ -7,6 +7,57 @@ const adminMiddleware = require("../middleware/adminMiddleware");
 const router = express.Router();
 router.use(adminMiddleware);
 
+const AUDIT_FIELDS = new Set([
+    "name", "product_code", "category_id", "category", "category_slug",
+    "price", "old_price", "status", "is_new", "is_sale",
+    "sku", "size", "color_name", "color_code", "variant_id",
+    "direction", "quantity", "note", "order_status", "payment_status"
+]);
+
+function auditDescription(method, path) {
+    const route = path.split("?")[0];
+    if (route.includes("/payment/confirm-cod")) return ["confirm_payment", "order", "Xác nhận đã thu tiền COD"];
+    if (route.endsWith("/status") && route.includes("/orders/")) return ["change_order_status", "order", "Cập nhật trạng thái đơn hàng"];
+    if (route.includes("/orders/")) return ["update_order", "order", "Thao tác quản lý đơn hàng"];
+    if (route.includes("/inventory/adjust")) return ["adjust_inventory", "inventory", "Điều chỉnh tồn kho thủ công"];
+    if (route.includes("/categories")) return [method === "POST" ? "create_category" : "update_category", "category", "Thay đổi danh mục"];
+    if (route.includes("/variants")) return [method === "POST" ? "create_variant" : "update_variant", "product_variant", "Thay đổi biến thể sản phẩm"];
+    if (route.includes("/products")) return [method === "POST" ? "create_product" : method === "DELETE" ? "archive_product" : "update_product", "product", "Thay đổi sản phẩm"];
+    if (route.includes("/customers/")) return ["change_customer_status", "customer", "Cập nhật trạng thái tài khoản khách hàng"];
+    return ["admin_mutation", "admin", "Thao tác quản trị"];
+}
+
+// Ghi nhận yêu cầu thay đổi đã trả về thành công. Không lưu mật khẩu, token,
+// thông tin thanh toán nhạy cảm hoặc nội dung không nằm trong danh sách cho phép.
+router.use((req, res, next) => {
+    if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
+    const originalJson = res.json.bind(res);
+    res.json = (payload) => {
+        if (res.statusCode >= 400 || payload?.success !== true) return originalJson(payload);
+        const [action, entityType, description] = auditDescription(req.method, req.path);
+        const match = req.path.match(/\/(\d+)(?:\/|$)/);
+        const entityId = match ? Number(match[1]) : null;
+        const safeDetails = {};
+        for (const [key, value] of Object.entries(req.body || {})) {
+            if (AUDIT_FIELDS.has(key) && ["string", "number", "boolean"].includes(typeof value)) {
+                safeDetails[key] = typeof value === "string" ? value.slice(0, 160) : value;
+            }
+        }
+        const details = Object.keys(safeDetails).length ? JSON.stringify(safeDetails) : null;
+        const actorId = req.user?.id || null;
+        const ip = String(req.ip || "").slice(0, 45) || null;
+        const agent = String(req.get("user-agent") || "").slice(0, 255) || null;
+        pool.execute(
+            `INSERT INTO admin_activity_logs
+                (actor_user_id, action, entity_type, entity_id, description, details, ip_address, user_agent)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [actorId, action, entityType, entityId, description, details, ip, agent]
+        ).catch(error => console.error("Không thể ghi nhật ký quản trị:", error));
+        return originalJson(payload);
+    };
+    return next();
+});
+
 const ORDER_STATUSES = ["pending", "confirmed", "processing", "shipping", "completed", "cancelled"];
 const PRODUCT_STATUSES = ["active", "inactive"];
 
@@ -31,6 +82,44 @@ function sendError(res, error, message) {
     console.error(message, error);
     return res.status(500).json({ success: false, message });
 }
+
+
+router.get("/activity-logs", async (req, res) => {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 30));
+    const q = String(req.query.q || "").trim().slice(0, 100);
+    const action = String(req.query.action || "").trim().slice(0, 60);
+    const from = String(req.query.from || "").trim();
+    const to = String(req.query.to || "").trim();
+    const clauses = [], params = [];
+    if (q) {
+        clauses.push("(l.description LIKE ? OR l.entity_type LIKE ? OR CAST(l.entity_id AS CHAR) LIKE ? OR u.full_name LIKE ?)");
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    if (action) { clauses.push("l.action = ?"); params.push(action); }
+    if (from && /^\\d{4}-\\d{2}-\\d{2}$/.test(from)) { clauses.push("l.created_at >= ?"); params.push(from); }
+    if (to && /^\\d{4}-\\d{2}-\\d{2}$/.test(to)) { clauses.push("l.created_at < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(to); }
+    const where = clauses.length ? "WHERE " + clauses.join(" AND ") : "";
+    try {
+        const [[count]] = await pool.execute(`
+            SELECT COUNT(*) AS total FROM admin_activity_logs l
+            LEFT JOIN users u ON u.id = l.actor_user_id ${where}
+        `, params);
+        const [logs] = await pool.execute(`
+            SELECT l.id, l.actor_user_id, l.action, l.entity_type, l.entity_id,
+                   l.description, l.details, l.ip_address, l.created_at,
+                   u.full_name AS actor_name, u.email AS actor_email
+            FROM admin_activity_logs l
+            LEFT JOIN users u ON u.id = l.actor_user_id
+            ${where}
+            ORDER BY l.created_at DESC, l.id DESC
+            LIMIT ? OFFSET ?
+        `, [...params, limit, (page - 1) * limit]);
+        return res.json({ success: true, logs, pagination: { page, limit, total: Number(count.total), totalPages: Math.ceil(Number(count.total) / limit) } });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải nhật ký hoạt động. Hãy kiểm tra migration admin_activity_logs.");
+    }
+});
 
 // GET /api/admin/dashboard
 router.get("/dashboard", async (req, res) => {
