@@ -4,6 +4,11 @@
 document.addEventListener("DOMContentLoaded", async () => {
     await loadSharedComponents();
 
+    const chatScript = document.createElement("script");
+    chatScript.src = "/frontend/assets/js/chat-widget.js";
+    chatScript.defer = true;
+    document.body.appendChild(chatScript);
+
     updateHeaderCounts();
     setupHeaderInteractions();
 
