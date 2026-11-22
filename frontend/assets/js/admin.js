@@ -61,13 +61,14 @@
     function setView(view) {
         document.querySelectorAll(".admin-view").forEach(el => el.classList.toggle("active", el.id === "view-" + view));
         document.querySelectorAll(".admin-nav a").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh"})[view] || "Quản trị";
+        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh","activity-logs":"Nhật ký hoạt động"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
         if (view === "products") { loadProducts(); loadCategoryManagement(); }
         if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
         if (view === "inventory") { loadInventoryProducts(); loadInventory(); }
         if (view === "reports") loadReports();
+        if (view === "activity-logs") loadActivityLogs();
     }
 
     async function loadDashboard() {
@@ -122,6 +123,55 @@
 
             const low = data.lowStock || [];
             $("report-low-stock").innerHTML = low.length ? low.map(item => `<tr><td>${escapeHtml(item.product_code)}</td><td>${escapeHtml(item.name)}</td><td><span class="pill ${Number(item.stock) <= 2 ? "danger" : "warn"}">${Number(item.stock || 0)}</span></td></tr>`).join("") : '<tr><td colspan="3" class="empty-row">Không có sản phẩm nào ở ngưỡng tồn kho thấp.</td></tr>';
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    let activityPage = 1;
+
+    async function loadActivityLogs() {
+        try {
+            const params = new URLSearchParams({
+                page: String(activityPage),
+                limit: "30",
+                q: $("activity-search").value.trim(),
+                action: $("activity-action").value,
+                from: $("activity-from").value,
+                to: $("activity-to").value
+            });
+            const data = await api("/activity-logs?" + params.toString());
+            const labels = {
+                confirm_payment: "Xác nhận thanh toán",
+                change_order_status: "Cập nhật trạng thái đơn",
+                update_order: "Thao tác đơn hàng",
+                adjust_inventory: "Điều chỉnh tồn kho",
+                create_category: "Tạo danh mục",
+                update_category: "Cập nhật danh mục",
+                create_product: "Tạo sản phẩm",
+                update_product: "Cập nhật sản phẩm",
+                archive_product: "Ngừng kinh doanh sản phẩm",
+                create_variant: "Tạo biến thể",
+                update_variant: "Cập nhật biến thể",
+                change_customer_status: "Cập nhật khách hàng",
+                admin_mutation: "Thao tác quản trị"
+            };
+            const entityLabels = {order:"Đơn hàng",product:"Sản phẩm",product_variant:"Biến thể",category:"Danh mục",customer:"Khách hàng",inventory:"Kho hàng",admin:"Quản trị"};
+            $("activity-logs-table").innerHTML = data.logs.length ? data.logs.map(log => {
+                let details = {};
+                try { details = typeof log.details === "string" ? JSON.parse(log.details) : (log.details || {}); } catch (_) {}
+                const detailText = Object.entries(details).map(([key, value]) => key + ": " + value).join(" · ");
+                return `<tr>
+                    <td>${new Date(log.created_at).toLocaleString("vi-VN")}</td>
+                    <td><strong>${escapeHtml(log.actor_name || "Tài khoản #" + (log.actor_user_id || "không rõ"))}</strong><br><small>${escapeHtml(log.actor_email || "")}</small></td>
+                    <td>${escapeHtml(labels[log.action] || log.description)}</td>
+                    <td>${escapeHtml(entityLabels[log.entity_type] || log.entity_type)}</td>
+                    <td>${log.entity_id ? "#" + Number(log.entity_id) : "—"}</td>
+                    <td class="activity-detail-cell">${escapeHtml(detailText || log.description)}</td>
+                    <td>${escapeHtml(log.ip_address || "—")}</td>
+                </tr>`;
+            }).join("") : '<tr><td colspan="7" class="empty-row">Không có hoạt động phù hợp bộ lọc.</td></tr>';
+            $("activity-page-label").textContent = `Trang ${data.pagination.page} / ${Math.max(1,data.pagination.totalPages)} · ${data.pagination.total} bản ghi`;
+            $("activity-prev").disabled = activityPage <= 1;
+            $("activity-next").disabled = activityPage >= data.pagination.totalPages;
         } catch (error) { alertMessage(error.message, true); }
     }
 
@@ -551,6 +601,11 @@
         $("customer-search").addEventListener("input", debounce(loadCustomers, 300));
         $("inventory-adjust-form").addEventListener("submit", saveInventoryAdjustment);
         $("reports-filter").addEventListener("submit", event => { event.preventDefault(); loadReports(); });
+        $("activity-log-filter").addEventListener("submit", event => { event.preventDefault(); activityPage = 1; loadActivityLogs(); });
+        $("activity-search").addEventListener("input", debounce(() => { activityPage = 1; loadActivityLogs(); }, 300));
+        $("activity-action").addEventListener("change", () => { activityPage = 1; loadActivityLogs(); });
+        $("activity-prev").addEventListener("click", () => { activityPage = Math.max(1, activityPage - 1); loadActivityLogs(); });
+        $("activity-next").addEventListener("click", () => { activityPage += 1; loadActivityLogs(); });
         $("inventory-product").addEventListener("change", event => loadInventoryVariants(event.target.value));
         $("inventory-search").addEventListener("input", debounce(() => { inventoryPage = 1; loadInventory(); }, 300));
         $("inventory-type").addEventListener("change", () => { inventoryPage = 1; loadInventory(); });
