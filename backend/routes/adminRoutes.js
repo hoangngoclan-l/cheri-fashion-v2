@@ -97,7 +97,7 @@ router.get("/activity-logs", async (req, res) => {
     const to = String(req.query.to || "").trim();
     const clauses = [], params = [];
     const validDate = value => {
-        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
         const parsed = new Date(value + "T00:00:00.000Z");
         return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
     };
@@ -109,8 +109,8 @@ router.get("/activity-logs", async (req, res) => {
         params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
     if (action) { clauses.push("l.action = ?"); params.push(action); }
-    if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) { clauses.push("l.created_at >= ?"); params.push(from); }
-    if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) { clauses.push("l.created_at < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(to); }
+    if (from) { clauses.push("l.created_at >= ?"); params.push(from); }
+    if (to) { clauses.push("l.created_at < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(to); }
     const where = clauses.length ? "WHERE " + clauses.join(" AND ") : "";
     try {
         const [[count]] = await pool.execute(`
