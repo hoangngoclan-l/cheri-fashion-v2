@@ -90,3 +90,12 @@
 .report-status-track span{display:block;height:100%;border-radius:10px;background:var(--pink)}
 @media(max-width:900px){.reports-toolbar{grid-template-columns:1fr}.reports-filter{justify-content:flex-start}}
 @media(max-width:700px){.admin-nav{grid-template-columns:repeat(3,minmax(0,1fr))}.reports-two-column{grid-template-columns:1fr}.reports-filter{display:grid;grid-template-columns:1fr 1fr}.reports-filter button{grid-column:1/-1}.report-daily-chart{min-height:190px}}
+
+
+/* Admin activity log */
+#activity-log-filter{max-width:760px}
+#activity-log-filter label:last-of-type{min-width:180px}
+.activity-detail-cell{white-space:normal;min-width:220px;max-width:360px;line-height:1.5}
+#activity-logs-table td{vertical-align:top}
+#activity-logs-table small{display:inline-block;margin-top:4px;color:var(--muted);font-size:9px}
+@media(max-width:700px){#activity-log-filter{display:grid;grid-template-columns:1fr}#activity-log-filter label:last-of-type{min-width:0}}
