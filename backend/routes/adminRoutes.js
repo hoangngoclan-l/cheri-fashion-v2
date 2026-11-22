@@ -899,6 +899,33 @@ router.get("/customers", async (req, res) => {
     }
 });
 
+// GET /api/admin/customers/:id — customer profile and order summary (read-only).
+router.get("/customers/:id", async (req, res) => {
+    const id = positiveId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "ID khách hàng không hợp lệ." });
+    try {
+        const [[customer]] = await pool.execute(`
+            SELECT id, full_name, email, phone, status, created_at
+            FROM users WHERE id = ? AND role = 'customer' LIMIT 1
+        `, [id]);
+        if (!customer) return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng." });
+        const [[summary]] = await pool.execute(`
+            SELECT COUNT(*) AS total_orders,
+                SUM(CASE WHEN order_status <> 'cancelled' THEN 1 ELSE 0 END) AS valid_orders,
+                COALESCE(SUM(CASE WHEN payment_status = 'paid' AND order_status <> 'cancelled' THEN total_amount ELSE 0 END), 0) AS collected_amount,
+                COALESCE(SUM(CASE WHEN payment_status = 'unpaid' AND order_status <> 'cancelled' THEN total_amount ELSE 0 END), 0) AS outstanding_amount
+            FROM orders WHERE user_id = ?
+        `, [id]);
+        const [orders] = await pool.execute(`
+            SELECT id, order_code, total_amount, payment_method, payment_status, order_status, created_at
+            FROM orders WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 50
+        `, [id]);
+        return res.json({ success: true, customer, summary, orders });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải hồ sơ khách hàng.");
+    }
+});
+
 // PATCH /api/admin/customers/:id/status
 router.patch("/customers/:id/status", async (req, res) => {
     const id = positiveId(req.params.id);
