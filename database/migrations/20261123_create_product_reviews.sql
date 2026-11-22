@@ -1,8 +1,10 @@
 -- CHERI FASHION: verified product reviews
+-- Keep FK column types aligned with the existing parent tables:
+-- products.id is INT (signed); users/orders/order_items ids are BIGINT UNSIGNED.
 CREATE TABLE IF NOT EXISTS product_reviews (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT UNSIGNED NOT NULL,
-    product_id BIGINT UNSIGNED NOT NULL,
+    product_id INT NOT NULL,
     order_id BIGINT UNSIGNED NOT NULL,
     order_item_id BIGINT UNSIGNED NOT NULL,
     rating TINYINT UNSIGNED NOT NULL,
@@ -21,6 +23,5 @@ CREATE TABLE IF NOT EXISTS product_reviews (
     CONSTRAINT fk_product_reviews_product FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_product_reviews_order FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_product_reviews_order_item FOREIGN KEY (order_item_id) REFERENCES order_items(id) ON DELETE RESTRICT ON UPDATE CASCADE,
-    CONSTRAINT fk_product_reviews_moderator FOREIGN KEY (moderated_by) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE,
-    CONSTRAINT chk_product_reviews_rating CHECK (rating BETWEEN 1 AND 5)
+    CONSTRAINT fk_product_reviews_moderator FOREIGN KEY (moderated_by) REFERENCES users(id) ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
