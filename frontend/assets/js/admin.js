@@ -169,9 +169,24 @@
                 key === "old_price" || key === "stock" ? 0 : "");
         });
 
-        const selectedCategory = categories.find(
+        let selectedCategory = categories.find(
             category => category.slug === product?.category_slug
         );
+        if (product?.category_slug && !selectedCategory) {
+            try {
+                const data = await api("/categories/manage");
+                selectedCategory = (data.categories || []).find(category => category.slug === product.category_slug);
+                if (selectedCategory) {
+                    categories.push(selectedCategory);
+                    $("product-category").insertAdjacentHTML(
+                        "beforeend",
+                        `<option value="${selectedCategory.id}">${escapeHtml(selectedCategory.name)} · Ngừng hoạt động</option>`
+                    );
+                }
+            } catch (error) {
+                alertMessage(error.message, true);
+            }
+        }
 
         form.elements.category_id.value = selectedCategory ? String(selectedCategory.id) : "";
         form.elements.is_new.checked = Boolean(product?.is_new);
