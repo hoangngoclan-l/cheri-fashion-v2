@@ -287,7 +287,7 @@
                 const history = historyData.history || [];
                 $("order-detail-history").innerHTML = history.length ? history.map(entry => `
                     <tr>
-                        <td>${escapeHtml(date(entry.created_at))}</td>
+                        <td>${escapeHtml(entry.created_at ? new Date(entry.created_at).toLocaleString("vi-VN") : "—")}</td>
                         <td>${escapeHtml(statusText(entry.from_status))}</td>
                         <td><span class="pill ${statusClass(entry.to_status)}">${escapeHtml(statusText(entry.to_status))}</span></td>
                         <td>${escapeHtml(entry.changed_by_name || "Quản trị viên")}</td>
