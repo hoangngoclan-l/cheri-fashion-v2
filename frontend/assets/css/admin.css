@@ -34,3 +34,5 @@
 .order-detail-note{margin-top:20px;padding:13px;border-radius:9px;background:var(--canvas)}
 .order-detail-note strong{font-size:11px}.order-detail-note p{margin:7px 0 0;color:var(--muted);font-size:11px;white-space:pre-wrap}
 @media(max-width:700px){.order-detail-content{padding:17px}.order-detail-meta{grid-template-columns:1fr}}
+
+.order-payment-action{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:18px 0;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--soft)}.order-payment-action strong{font-size:12px}.order-payment-action p{margin:5px 0 0;color:var(--muted);font-size:11px}@media(max-width:560px){.order-payment-action{align-items:flex-start;flex-direction:column}}
