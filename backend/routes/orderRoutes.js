@@ -442,6 +442,14 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
 
     const orderId = orderResult.insertId;
 
+    // Ghi nhận sự kiện tạo đơn ngay trong transaction tạo đơn.
+    // changed_by để NULL vì sự kiện phát sinh từ checkout, không phải thao tác Admin.
+    await connection.execute(
+      `INSERT INTO order_status_history (order_id, from_status, to_status, changed_by)
+       VALUES (?, ?, ?, NULL)`,
+      [orderId, "created", "pending"]
+    );
+
     const [idempotencyUpdate] = await connection.execute(
       `UPDATE order_idempotency
        SET order_id = ?
