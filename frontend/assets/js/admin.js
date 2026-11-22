@@ -63,7 +63,7 @@
         document.querySelectorAll(".admin-nav a").forEach(el => el.classList.toggle("active", el.dataset.view === view));
         $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
-        if (view === "products") loadProducts();
+        if (view === "products") { loadProducts(); loadCategoryManagement(); }
         if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
     }
@@ -98,6 +98,45 @@
         if (!categories.length) {
             throw new Error("Chưa có danh mục đang hoạt động.");
         }
+    }
+
+    async function loadCategoryManagement() {
+        try {
+            const data = await api("/categories/manage");
+            const rows = data.categories || [];
+            $("categories-table").innerHTML = rows.length ? rows.map(c => `
+                <tr>
+                    <td><strong>${escapeHtml(c.name)}</strong></td>
+                    <td><code>${escapeHtml(c.slug)}</code></td>
+                    <td>${Number(c.product_count || 0)}</td>
+                    <td><span class="pill ${Number(c.is_active) === 1 ? "success" : "muted"}">${Number(c.is_active) === 1 ? "Đang hoạt động" : "Ngừng hoạt động"}</span></td>
+                    <td><button type="button" class="table-action" data-edit-category="${c.id}">Sửa</button> <button type="button" class="table-action" data-toggle-category="${c.id}" data-next-status="${Number(c.is_active) === 1 ? "inactive" : "active"}">${Number(c.is_active) === 1 ? "Ngừng hoạt động" : "Kích hoạt"}</button></td>
+                </tr>`).join("") : '<tr><td colspan="5" class="empty-row">Chưa có danh mục.</td></tr>';
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    function resetCategoryForm() {
+        const form = $("category-form");
+        form.reset();
+        form.elements.id.value = "";
+        $("category-save").textContent = "Thêm danh mục";
+        $("category-cancel").hidden = true;
+    }
+
+    async function saveCategory(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const id = form.elements.id.value;
+        const payload = { name: form.elements.name.value.trim(), slug: form.elements.slug.value.trim().toLowerCase() };
+        try {
+            await api(id ? "/categories/" + id : "/categories", {
+                method: id ? "PUT" : "POST",
+                body: JSON.stringify(payload)
+            });
+            alertMessage(id ? "Đã cập nhật danh mục và các sản phẩm liên quan." : "Đã thêm danh mục.");
+            resetCategoryForm();
+            await Promise.all([loadCategoryManagement(), loadCategories(), loadProducts()]);
+        } catch (error) { alertMessage(error.message, true); }
     }
 
     async function loadProducts() {
@@ -360,6 +399,8 @@
         $("close-product-dialog").addEventListener("click", () => $("product-dialog").close());
         $("cancel-product").addEventListener("click", () => $("product-dialog").close());
         $("product-form").addEventListener("submit", saveProduct);
+        $("category-form").addEventListener("submit", saveCategory);
+        $("category-cancel").addEventListener("click", resetCategoryForm);
         $("variant-form").addEventListener("submit", saveVariant);
         $("close-variant-dialog").addEventListener("click", () => $("variant-dialog").close());
         $("cancel-variant-dialog").addEventListener("click", () => $("variant-dialog").close());
@@ -374,6 +415,41 @@
         });
         document.addEventListener("click", async event => {
             const edit = event.target.closest("[data-edit-product]");
+            const editCategory = event.target.closest("[data-edit-category]");
+            const toggleCategory = event.target.closest("[data-toggle-category]");
+            if (editCategory) {
+                try {
+                    const data = await api("/categories/manage");
+                    const category = (data.categories || []).find(item => String(item.id) === editCategory.dataset.editCategory);
+                    if (category) {
+                        const form = $("category-form");
+                        form.elements.id.value = category.id;
+                        form.elements.name.value = category.name;
+                        form.elements.slug.value = category.slug;
+                        $("category-save").textContent = "Lưu thay đổi";
+                        $("category-cancel").hidden = false;
+                        form.scrollIntoView({ behavior: "smooth", block: "center" });
+                        form.elements.name.focus();
+                    }
+                } catch (error) { alertMessage(error.message, true); }
+                return;
+            }
+            if (toggleCategory) {
+                const next = toggleCategory.dataset.nextStatus;
+                const row = toggleCategory.closest("tr");
+                const count = Number(row?.children[2]?.textContent || 0);
+                const message = next === "inactive"
+                    ? (count > 0 ? "Danh mục đang có sản phẩm. Ngừng hoạt động sẽ giữ nguyên sản phẩm cũ nhưng không cho chọn cho sản phẩm mới. Tiếp tục?" : "Ngừng hoạt động danh mục này?")
+                    : "Kích hoạt lại danh mục này?";
+                if (confirm(message)) {
+                    try {
+                        await api("/categories/" + toggleCategory.dataset.toggleCategory + "/status", { method: "PATCH", body: JSON.stringify({ status: next }) });
+                        alertMessage("Đã cập nhật trạng thái danh mục.");
+                        await Promise.all([loadCategoryManagement(), loadCategories()]);
+                    } catch (error) { alertMessage(error.message, true); }
+                }
+                return;
+            }
             const variants = event.target.closest("[data-variant-product]");
             const editVariantButton = event.target.closest("[data-edit-variant]");
             const toggleVariantButton = event.target.closest("[data-toggle-variant]");
