@@ -71,7 +71,8 @@
         try {
             const data = await api("/dashboard");
             const m = data.metrics || {};
-            $("metric-revenue").textContent = money(m.gross_revenue);
+            $("metric-revenue").textContent = money(m.collected_revenue);
+            $("metric-unpaid").textContent = "Chưa thu: " + money(m.unpaid_amount) + " (" + Number(m.unpaid_orders || 0).toLocaleString("vi-VN") + " đơn)";
             $("metric-orders").textContent = Number(m.total_orders || 0).toLocaleString("vi-VN");
             $("metric-pending").textContent = (m.pending_orders || 0) + " đơn chờ xử lý";
             $("metric-customers").textContent = Number(m.total_customers || 0).toLocaleString("vi-VN");
