@@ -61,11 +61,12 @@
     function setView(view) {
         document.querySelectorAll(".admin-view").forEach(el => el.classList.toggle("active", el.id === "view-" + view));
         document.querySelectorAll(".admin-nav a").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng"})[view] || "Quản trị";
+        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
         if (view === "products") { loadProducts(); loadCategoryManagement(); }
         if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
+        if (view === "inventory") { loadInventoryProducts(); loadInventory(); }
     }
 
     async function loadDashboard() {
@@ -413,6 +414,79 @@
         } catch (error) { alertMessage(error.message, true); }
     }
 
+    let inventoryPage = 1;
+    let inventoryProductOptionsLoaded = false;
+
+    async function loadInventoryProducts() {
+        try {
+            const data = await api("/products");
+            const select = $("inventory-product");
+            const selected = select.value;
+            select.innerHTML = '<option value="">Chọn sản phẩm</option>' +
+                (data.products || []).map(p => `<option value="${p.id}">${escapeHtml(p.name)} · ${escapeHtml(p.product_code)}</option>`).join("");
+            if (selected) select.value = selected;
+            inventoryProductOptionsLoaded = true;
+            await loadInventoryVariants(select.value);
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    async function loadInventoryVariants(productId) {
+        const select = $("inventory-variant");
+        select.innerHTML = '<option value="">Tồn kho sản phẩm (không có biến thể)</option>';
+        if (!productId) return;
+        try {
+            const data = await api("/products/" + productId + "/variants");
+            const variants = data.variants || [];
+            if (variants.length) {
+                select.innerHTML = '<option value="">— Chọn biến thể —</option>' +
+                    variants.map(v => `<option value="${v.id}">${escapeHtml(v.sku)} · ${escapeHtml(v.size)} · ${escapeHtml(v.color_name)} · tồn ${Number(v.stock)}</option>`).join("");
+            }
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    async function loadInventory() {
+        try {
+            const params = new URLSearchParams({
+                page: String(inventoryPage), limit: "30",
+                q: $("inventory-search").value.trim(),
+                type: $("inventory-type").value
+            });
+            const data = await api("/inventory/movements?" + params.toString());
+            $("inventory-movements-table").innerHTML = data.movements.length ? data.movements.map(m => {
+                const typeLabels = {adjustment_in:"Nhập kho",adjustment_out:"Xuất kho",order_out:"Xuất theo đơn",order_return:"Hoàn kho"};
+                const ref = m.reference_type === "order" ? "Đơn #" + m.reference_id : m.reference_type === "admin_adjustment" ? "Điều chỉnh Admin" : "—";
+                return `<tr><td>${new Date(m.created_at).toLocaleString("vi-VN")}</td><td><strong>${escapeHtml(m.product_name || ("Sản phẩm #" + m.product_id))}</strong><br><small>${escapeHtml([m.sku,m.size,m.color_name].filter(Boolean).join(" · ") || m.product_code || "")}</small></td><td>${escapeHtml(typeLabels[m.movement_type] || m.movement_type)}</td><td>${Number(m.quantity)}</td><td>${Number(m.stock_before)}</td><td>${Number(m.stock_after)}</td><td>${escapeHtml(ref)}</td><td>${escapeHtml(m.actor_name || (m.actor_user_id ? "Tài khoản #" + m.actor_user_id : "Hệ thống"))}</td><td>${escapeHtml(m.note || "—")}</td></tr>`;
+            }).join("") : '<tr><td colspan="9" class="empty-row">Chưa có lịch sử biến động kho.</td></tr>';
+            $("inventory-page-label").textContent = `Trang ${data.pagination.page} / ${Math.max(1,data.pagination.totalPages)} · ${data.pagination.total} bản ghi`;
+            $("inventory-prev").disabled = inventoryPage <= 1;
+            $("inventory-next").disabled = inventoryPage >= data.pagination.totalPages;
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    async function saveInventoryAdjustment(event) {
+        event.preventDefault();
+        const form = event.currentTarget;
+        const productId = $("inventory-product").value;
+        const variantId = $("inventory-variant").value;
+        if (!productId) { alertMessage("Hãy chọn sản phẩm.", true); return; }
+        if ($("inventory-variant").options.length > 1 && !variantId) {
+            alertMessage("Sản phẩm có biến thể. Hãy chọn đúng biến thể cần điều chỉnh.", true); return;
+        }
+        const payload = {
+            product_id: Number(productId), variant_id: variantId ? Number(variantId) : null,
+            direction: form.elements.direction.value,
+            quantity: Number(form.elements.quantity.value),
+            note: form.elements.note.value.trim()
+        };
+        if (!confirm(`Xác nhận ${payload.direction === "in" ? "nhập" : "xuất"} ${payload.quantity} sản phẩm vào/ra kho?`)) return;
+        try {
+            const result = await api("/inventory/adjust", {method:"POST",body:JSON.stringify(payload)});
+            alertMessage(result.message + ` Tồn: ${result.stock_before} → ${result.stock_after}.`);
+            form.reset();
+            await Promise.all([loadInventory(),loadProducts(),loadInventoryVariants(productId)]);
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
     async function loadCustomers() {
         try {
             const q = encodeURIComponent($("customer-search").value.trim());
@@ -435,6 +509,12 @@
         $("order-payment-method").addEventListener("change", loadOrders);
         $("order-payment-status").addEventListener("change", loadOrders);
         $("customer-search").addEventListener("input", debounce(loadCustomers, 300));
+        $("inventory-adjust-form").addEventListener("submit", saveInventoryAdjustment);
+        $("inventory-product").addEventListener("change", event => loadInventoryVariants(event.target.value));
+        $("inventory-search").addEventListener("input", debounce(() => { inventoryPage = 1; loadInventory(); }, 300));
+        $("inventory-type").addEventListener("change", () => { inventoryPage = 1; loadInventory(); });
+        $("inventory-prev").addEventListener("click", () => { inventoryPage = Math.max(1, inventoryPage - 1); loadInventory(); });
+        $("inventory-next").addEventListener("click", () => { inventoryPage += 1; loadInventory(); });
         $("add-product").addEventListener("click", () => openProduct());
         $("close-product-dialog").addEventListener("click", () => $("product-dialog").close());
         $("cancel-product").addEventListener("click", () => $("product-dialog").close());
