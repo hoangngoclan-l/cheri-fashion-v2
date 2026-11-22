@@ -280,7 +280,21 @@
                 <div class="detail-grand-total"><span>Tổng thanh toán</span><strong>${money(order.total_amount)}</strong></div>
             `;
             $("order-detail-note").textContent = order.customer_note || "Không có ghi chú.";
+            $("order-detail-history").innerHTML = '<tr><td colspan="4" class="empty-row">Đang tải lịch sử...</td></tr>';
             $("order-detail-dialog").showModal();
+            try {
+                const historyData = await api("/orders/" + encodeURIComponent(orderId) + "/history");
+                const history = historyData.history || [];
+                $("order-detail-history").innerHTML = history.length ? history.map(entry => `
+                    <tr>
+                        <td>${escapeHtml(date(entry.created_at))}</td>
+                        <td>${escapeHtml(statusText(entry.from_status))}</td>
+                        <td><span class="pill ${statusClass(entry.to_status)}">${escapeHtml(statusText(entry.to_status))}</span></td>
+                        <td>${escapeHtml(entry.changed_by_name || "Quản trị viên")}</td>
+                    </tr>`).join("") : '<tr><td colspan="4" class="empty-row">Chưa có thay đổi trạng thái được ghi nhận.</td></tr>';
+            } catch (historyError) {
+                $("order-detail-history").innerHTML = '<tr><td colspan="4" class="empty-row">Không tải được lịch sử. Kiểm tra migration cơ sở dữ liệu.</td></tr>';
+            }
         } catch (error) { alertMessage(error.message, true); }
     }
 
