@@ -7,7 +7,7 @@
     const money = value => new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(Number(value || 0));
     const date = value => value ? new Date(value).toLocaleDateString("vi-VN") : "—";
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[char]));
-    const statusText = value => ({pending:"Chờ xác nhận",confirmed:"Đã xác nhận",processing:"Đang xử lý",shipping:"Đang giao",completed:"Đã hoàn thành",cancelled:"Đã hủy",active:"Đang hoạt động",inactive:"Ngừng hoạt động",blocked:"Đã khóa",out_of_stock:"Hết hàng"})[value] || value || "—";
+    const statusText = value => ({created:"Tạo đơn hàng",pending:"Chờ xác nhận",confirmed:"Đã xác nhận",processing:"Đang xử lý",shipping:"Đang giao",completed:"Đã hoàn thành",cancelled:"Đã hủy",active:"Đang hoạt động",inactive:"Ngừng hoạt động",blocked:"Đã khóa",out_of_stock:"Hết hàng"})[value] || value || "—";
     const statusClass = value => ["completed","active"].includes(value) ? "success" : ["pending","confirmed","processing","shipping"].includes(value) ? "warn" : ["cancelled","blocked","inactive","out_of_stock"].includes(value) ? "danger" : "";
     const paymentStatusText = value => ({unpaid:"Chưa thanh toán",paid:"Đã thanh toán",pending:"Đang xử lý",failed:"Thanh toán thất bại",refunded:"Đã hoàn tiền",partially_refunded:"Hoàn tiền một phần"})[value] || value || "Chưa rõ";
     const paymentStatusClass = value => value === "paid" ? "success" : value === "unpaid" ? "warn" : ["failed","refunded"].includes(value) ? "danger" : "";
@@ -290,7 +290,7 @@
                         <td>${escapeHtml(entry.created_at ? new Date(entry.created_at).toLocaleString("vi-VN") : "—")}</td>
                         <td>${escapeHtml(statusText(entry.from_status))}</td>
                         <td><span class="pill ${statusClass(entry.to_status)}">${escapeHtml(statusText(entry.to_status))}</span></td>
-                        <td>${escapeHtml(entry.changed_by_name || "Quản trị viên")}</td>
+                        <td>${escapeHtml(entry.changed_by_name || (entry.from_status === "created" ? "Khách hàng / hệ thống" : "Quản trị viên"))}</td>
                     </tr>`).join("") : '<tr><td colspan="4" class="empty-row">Chưa có thay đổi trạng thái được ghi nhận.</td></tr>';
             } catch (historyError) {
                 $("order-detail-history").innerHTML = '<tr><td colspan="4" class="empty-row">Không tải được lịch sử. Kiểm tra migration cơ sở dữ liệu.</td></tr>';
