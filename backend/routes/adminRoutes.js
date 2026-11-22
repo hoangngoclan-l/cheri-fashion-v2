@@ -341,6 +341,40 @@ router.get("/orders", async (req, res) => {
     }
 });
 
+// GET /api/admin/orders/:id — chi tiết đơn hàng và các dòng sản phẩm
+router.get("/orders/:id", async (req, res) => {
+    const id = positiveId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "Mã đơn hàng không hợp lệ." });
+
+    try {
+        const [[order]] = await pool.execute(`
+            SELECT id, order_code, user_id, recipient_name, phone, email,
+                shipping_address, subtotal, shipping_fee, discount_amount,
+                total_amount, payment_method, payment_status, order_status,
+                customer_note, created_at, updated_at
+            FROM orders
+            WHERE id = ?
+            LIMIT 1
+        `, [id]);
+
+        if (!order) return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+
+        const [items] = await pool.execute(`
+            SELECT oi.id, oi.product_id, oi.variant_id, oi.product_name,
+                oi.size, oi.color_name, oi.unit_price, oi.quantity, oi.line_total,
+                pv.sku
+            FROM order_items oi
+            LEFT JOIN product_variants pv ON pv.id = oi.variant_id
+            WHERE oi.order_id = ?
+            ORDER BY oi.id ASC
+        `, [id]);
+
+        return res.json({ success: true, order, items });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải chi tiết đơn hàng.");
+    }
+});
+
 // PATCH /api/admin/orders/:id/status
 router.patch("/orders/:id/status", async (req, res) => {
     const id = positiveId(req.params.id);
