@@ -61,12 +61,13 @@
     function setView(view) {
         document.querySelectorAll(".admin-view").forEach(el => el.classList.toggle("active", el.id === "view-" + view));
         document.querySelectorAll(".admin-nav a").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng"})[view] || "Quản trị";
+        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
         if (view === "products") { loadProducts(); loadCategoryManagement(); }
         if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
         if (view === "inventory") { loadInventoryProducts(); loadInventory(); }
+        if (view === "reports") loadReports();
     }
 
     async function loadDashboard() {
@@ -82,6 +83,45 @@
             $("metric-low-stock").textContent = (m.low_stock || 0) + " sản phẩm sắp hết";
             $("recent-orders").innerHTML = data.recentOrders.length ? data.recentOrders.map(o => `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(o.recipient_name)}</td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td><td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td></tr>`).join("") : '<tr><td colspan="5" class="empty-row">Chưa có đơn hàng.</td></tr>';
             $("top-products").innerHTML = data.topProducts.length ? data.topProducts.map(p => `<div class="top-product"><span>${escapeHtml(p.product_name)}</span><strong>${Number(p.units_sold || 0)} sản phẩm · ${money(p.revenue)}</strong></div>`).join("") : '<p class="empty-row">Chưa có dữ liệu bán hàng.</p>';
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    async function loadReports() {
+        try {
+            const from = $("report-from").value;
+            const to = $("report-to").value;
+            if (!from || !to || from > to) throw new Error("Hãy chọn khoảng ngày hợp lệ.");
+            const data = await api("/reports?from=" + encodeURIComponent(from) + "&to=" + encodeURIComponent(to));
+            const s = data.summary || {};
+            $("report-revenue").textContent = money(s.collected_revenue);
+            $("report-paid-orders").textContent = Number(s.paid_orders || 0).toLocaleString("vi-VN");
+            $("report-outstanding").textContent = money(s.outstanding_amount);
+            $("report-unpaid-orders").textContent = Number(s.unpaid_orders || 0).toLocaleString("vi-VN") + " đơn chưa thanh toán";
+            $("report-cancelled").textContent = Number(s.cancelled_orders || 0).toLocaleString("vi-VN");
+            $("report-total-orders").textContent = Number(s.total_orders || 0).toLocaleString("vi-VN") + " tổng đơn trong kỳ";
+
+            const daily = data.daily || [];
+            const maxRevenue = Math.max(1, ...daily.map(item => Number(item.collected_revenue || 0)));
+            $("report-daily-chart").innerHTML = daily.length ? daily.map(item => {
+                const amount = Number(item.collected_revenue || 0);
+                const height = amount > 0 ? Math.max(5, Math.round(amount / maxRevenue * 100)) : 2;
+                return `<div class="report-day"><div class="report-bar-track"><div class="report-bar" style="height:${height}%"></div></div><strong>${money(amount)}</strong><span>${date(item.report_date)}</span><small>${Number(item.total_orders || 0)} đơn</small></div>`;
+            }).join("") : '<p class="empty-row">Không có đơn hàng trong khoảng thời gian này.</p>';
+
+            const statusLabels = {pending:"Chờ xác nhận",confirmed:"Đã xác nhận",processing:"Đang xử lý",shipping:"Đang giao",completed:"Đã hoàn thành",cancelled:"Đã hủy"};
+            const statuses = data.statuses || [];
+            const statusTotal = statuses.reduce((sum, item) => sum + Number(item.total || 0), 0);
+            $("report-status-list").innerHTML = statuses.length ? statuses.map(item => {
+                const count = Number(item.total || 0);
+                const width = statusTotal ? Math.round(count / statusTotal * 100) : 0;
+                return `<div class="report-status-row"><div><span>${escapeHtml(statusLabels[item.order_status] || item.order_status)}</span><strong>${count}</strong></div><div class="report-status-track"><span style="width:${width}%"></span></div></div>`;
+            }).join("") : '<p class="empty-row">Chưa có dữ liệu đơn hàng.</p>';
+
+            const top = data.topProducts || [];
+            $("report-top-products").innerHTML = top.length ? top.map((item,index) => `<div class="top-product"><span><b>${index+1}.</b> ${escapeHtml(item.product_name)}</span><strong>${Number(item.units_sold || 0)} sp · ${money(item.revenue)}</strong></div>`).join("") : '<p class="empty-row">Chưa có sản phẩm bán được từ đơn đã thanh toán.</p>';
+
+            const low = data.lowStock || [];
+            $("report-low-stock").innerHTML = low.length ? low.map(item => `<tr><td>${escapeHtml(item.product_code)}</td><td>${escapeHtml(item.name)}</td><td><span class="pill ${Number(item.stock) <= 2 ? "danger" : "warn"}">${Number(item.stock || 0)}</span></td></tr>`).join("") : '<tr><td colspan="3" class="empty-row">Không có sản phẩm nào ở ngưỡng tồn kho thấp.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
 
@@ -510,6 +550,7 @@
         $("order-payment-status").addEventListener("change", loadOrders);
         $("customer-search").addEventListener("input", debounce(loadCustomers, 300));
         $("inventory-adjust-form").addEventListener("submit", saveInventoryAdjustment);
+        $("reports-filter").addEventListener("submit", event => { event.preventDefault(); loadReports(); });
         $("inventory-product").addEventListener("change", event => loadInventoryVariants(event.target.value));
         $("inventory-search").addEventListener("input", debounce(() => { inventoryPage = 1; loadInventory(); }, 300));
         $("inventory-type").addEventListener("change", () => { inventoryPage = 1; loadInventory(); });
@@ -630,6 +671,11 @@
             try { await api("/orders/" + select.dataset.orderStatus + "/status", { method: "PATCH", body: JSON.stringify({ status: select.value }) }); alertMessage("Đã cập nhật trạng thái đơn hàng."); loadOrders(); }
             catch (error) { alertMessage(error.message, true); loadOrders(); }
         });
+        const today = new Date();
+        const toIso = value => { const local = new Date(value.getTime() - value.getTimezoneOffset() * 60000); return local.toISOString().slice(0, 10); };
+        $("report-to").value = toIso(today);
+        const monthAgo = new Date(today); monthAgo.setDate(monthAgo.getDate() - 29);
+        $("report-from").value = toIso(monthAgo);
         setView(location.hash.slice(1) || "dashboard");
     });
 
