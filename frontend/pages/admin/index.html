@@ -18,6 +18,7 @@
                 <a href="#inventory" data-view="inventory">▧ <span>Kho hàng</span></a>
                 <a href="#customers" data-view="customers">♙ <span>Khách hàng</span></a>
                 <a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a>
+                <a href="#support" data-view="support">✉ <span>Hỗ trợ khách</span></a>
                 <a href="#reports" data-view="reports">▥ <span>Báo cáo</span></a>
                 <a href="#activity-logs" data-view="activity-logs">◷ <span>Nhật ký</span></a>
             </nav>
@@ -115,6 +116,30 @@
                 <div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Ngày gửi</th><th>Sản phẩm</th><th>Khách hàng</th><th>Số sao</th><th>Nội dung</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="admin-reviews-table"><tr><td colspan="7" class="empty-row">Chọn mục Đánh giá để tải dữ liệu.</td></tr></tbody></table></div></div>
             </section>
             <section class="admin-view" id="view-customers"><div class="toolbar"><input id="customer-search" type="search" placeholder="Tìm tên, email hoặc số điện thoại"></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Khách hàng</th><th>Email</th><th>Số điện thoại</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="customers-table"><tr><td colspan="6">Chọn mục Khách hàng để tải dữ liệu.</td></tr></tbody></table></div></div></section>
+            <section class="admin-view" id="view-support">
+                <div class="support-layout">
+                    <div class="admin-panel support-inbox">
+                        <div class="panel-heading"><div><p class="eyebrow">CUSTOMER CARE</p><h2>Hộp thư hỗ trợ</h2></div><button class="button button-light" id="support-refresh" type="button">Làm mới</button></div>
+                        <label class="support-filter">Trạng thái
+                            <select id="support-status-filter"><option value="">Tất cả cuộc trò chuyện</option><option value="waiting_admin">Chờ nhân viên</option><option value="admin_active">Đang hỗ trợ</option><option value="ai_active">AI đang tư vấn</option><option value="closed">Đã kết thúc</option></select>
+                        </label>
+                        <div id="support-conversation-list" class="support-conversation-list"><p class="empty-row">Đang tải...</p></div>
+                    </div>
+                    <div class="admin-panel support-chat">
+                        <div class="panel-heading"><div><p class="eyebrow">CONVERSATION</p><h2 id="support-chat-title">Chọn cuộc trò chuyện</h2><p id="support-chat-meta" class="category-help">Nội dung trao đổi với khách hàng sẽ hiển thị tại đây.</p></div></div>
+                        <div id="support-chat-messages" class="support-chat-messages"><p class="empty-row">Chưa chọn cuộc trò chuyện.</p></div>
+                        <div class="support-chat-toolbar">
+                            <button class="button button-light" id="support-claim" type="button" disabled>Nhận hỗ trợ</button>
+                            <button class="button button-light" id="support-return-ai" type="button" disabled>Chuyển về AI</button>
+                            <button class="button button-light" id="support-close" type="button" disabled>Kết thúc</button>
+                        </div>
+                        <form id="support-reply-form" class="support-reply-form">
+                            <textarea id="support-reply" rows="2" maxlength="2000" placeholder="Nhập phản hồi cho khách hàng..." required disabled></textarea>
+                            <button class="button button-primary" type="submit" disabled id="support-send">Gửi phản hồi</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
         </main>
     </div>
     <dialog id="customer-detail-dialog" class="product-dialog customer-detail-dialog">
