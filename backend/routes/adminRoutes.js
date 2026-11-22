@@ -326,6 +326,13 @@ router.post("/categories", async (req, res) => {
             "INSERT INTO categories (name, slug, is_active) VALUES (?, ?, 1)",
             [name, slug]
         );
+        try {
+            await writeAdminActivityLog(pool, req, {
+                action: "create_category", entityType: "category", entityId: result.insertId,
+                description: "Tạo danh mục",
+                details: { after: { id: Number(result.insertId), name, slug, is_active: 1 } }
+            });
+        } catch (auditError) { console.error("Không thể ghi snapshot danh mục:", auditError); }
         return res.status(201).json({ success: true, categoryId: result.insertId, message: "Đã tạo danh mục." });
     } catch (error) {
         if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Tên hoặc slug danh mục đã tồn tại." });
@@ -357,6 +364,11 @@ router.put("/categories/:id", async (req, res) => {
             "UPDATE products SET category = ?, category_slug = ? WHERE category_slug = ?",
             [name, slug, current.slug]
         );
+        await writeAdminActivityLog(connection, req, {
+            action: "update_category", entityType: "category", entityId: id,
+            description: "Cập nhật danh mục và đồng bộ sản phẩm",
+            details: { before: { name: current.name, slug: current.slug }, after: { name, slug } }
+        });
         await connection.commit();
         return res.json({ success: true, message: "Đã cập nhật danh mục và đồng bộ sản phẩm liên quan." });
     } catch (error) {
@@ -376,11 +388,22 @@ router.patch("/categories/:id/status", async (req, res) => {
         return res.status(400).json({ success: false, message: "Thông tin trạng thái danh mục không hợp lệ." });
     }
     try {
+        const [[before]] = await pool.execute("SELECT id, name, slug, is_active FROM categories WHERE id = ? LIMIT 1", [id]);
+        if (!before) return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
         const [result] = await pool.execute(
             "UPDATE categories SET is_active = ? WHERE id = ?",
             [status === "active" ? 1 : 0, id]
         );
-        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
+        if (!result.affectedRows && Number(before.is_active) !== (status === "active" ? 1 : 0)) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
+        }
+        try {
+            await writeAdminActivityLog(pool, req, {
+                action: "change_category_status", entityType: "category", entityId: id,
+                description: "Thay đổi trạng thái danh mục",
+                details: { before: { is_active: Number(before.is_active) }, after: { is_active: status === "active" ? 1 : 0 }, name: before.name, slug: before.slug }
+            });
+        } catch (auditError) { console.error("Không thể ghi snapshot trạng thái danh mục:", auditError); }
         return res.json({ success: true, message: status === "active" ? "Đã kích hoạt danh mục." : "Đã ngừng kích hoạt danh mục." });
     } catch (error) {
         return sendError(res, error, "Không thể cập nhật trạng thái danh mục.");
@@ -461,6 +484,16 @@ router.post("/products", async (req, res) => {
                 VALUES (?, NULL, 'adjustment_in', ?, 0, ?, 'opening_balance', ?, ?)
             `, [result.insertId, stock, stock, "Tồn kho khởi tạo khi tạo sản phẩm", req.user?.id || null]);
         }
+        await writeAdminActivityLog(connection, req, {
+            action: "create_product", entityType: "product", entityId: result.insertId,
+            description: "Tạo sản phẩm",
+            details: { after: {
+                id: Number(result.insertId), product_code: productCode, name,
+                category_id: categoryId, category: categoryRow.name, category_slug: categoryRow.slug,
+                price, old_price: oldPrice, stock, status,
+                is_new: Boolean(body.is_new), is_sale: Boolean(body.is_sale)
+            }, opening_stock: stock }
+        });
         await connection.commit();
         return res.status(201).json({ success: true, productId: result.insertId, message: "Đã tạo sản phẩm và ghi nhận tồn kho khởi tạo." });
     } catch (error) {
@@ -514,7 +547,7 @@ router.put("/products/:id", async (req, res) => {
             }
         }
 
-        const [[stockState]] = await pool.execute("SELECT stock FROM products WHERE id = ? LIMIT 1", [id]);
+        const [[stockState]] = await pool.execute("SELECT id, product_code, name, category, category_slug, price, old_price, stock, status, is_new, is_sale FROM products WHERE id = ? LIMIT 1", [id]);
         if (!stockState) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
         const [[variantSummaryBefore]] = await pool.execute("SELECT COUNT(*) AS total FROM product_variants WHERE product_id = ?", [id]);
         if (Number(variantSummaryBefore.total) === 0 && Number(stockState.stock) !== stock) {
@@ -545,7 +578,18 @@ router.put("/products/:id", async (req, res) => {
         if (Number(variantSummary.total) > 0) {
             await syncProductStock(id);
         }
-
+        const [[afterProduct]] = await pool.execute("SELECT id, product_code, name, category, category_slug, price, old_price, stock, status, is_new, is_sale FROM products WHERE id = ? LIMIT 1", [id]);
+        try {
+            await writeAdminActivityLog(pool, req, {
+                action: "update_product", entityType: "product", entityId: id,
+                description: "Cập nhật thông tin sản phẩm",
+                details: {
+                    before: stockState,
+                    after: afterProduct,
+                    stock_managed_by_variants: Number(variantSummary.total) > 0
+                }
+            });
+        } catch (auditError) { console.error("Không thể ghi snapshot sản phẩm:", auditError); }
         return res.json({ success: true, message: "Đã cập nhật sản phẩm." });
     } catch (error) {
         if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Mã sản phẩm đã được sử dụng." });
@@ -558,13 +602,16 @@ router.delete("/products/:id", async (req, res) => {
     const id = positiveId(req.params.id);
     if (!id) return res.status(400).json({ success: false, message: "ID sản phẩm không hợp lệ." });
     try {
-        const [result] = await pool.execute("UPDATE products SET status='inactive' WHERE id=?", [id]);
-        if (!result.affectedRows) {
-            const [existing] = await pool.execute("SELECT id FROM products WHERE id = ? LIMIT 1", [id]);
-            if (!existing.length) {
-                return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
-            }
-        }
+        const [[before]] = await pool.execute("SELECT id, product_code, name, status, stock FROM products WHERE id = ? LIMIT 1", [id]);
+        if (!before) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+        await pool.execute("UPDATE products SET status='inactive' WHERE id=?", [id]);
+        try {
+            await writeAdminActivityLog(pool, req, {
+                action: "archive_product", entityType: "product", entityId: id,
+                description: "Ngừng kinh doanh sản phẩm",
+                details: { before: { status: before.status }, after: { status: "inactive" }, product_code: before.product_code, name: before.name, stock: Number(before.stock) }
+            });
+        } catch (auditError) { console.error("Không thể ghi snapshot lưu trữ sản phẩm:", auditError); }
         return res.json({ success: true, message: "Đã ngừng kinh doanh sản phẩm." });
     } catch (error) {
         return sendError(res, error, "Không thể ngừng kinh doanh sản phẩm.");
@@ -618,6 +665,14 @@ router.post('/products/:id/variants', async (req, res) => {
             `, [productId, result.insertId, stock, stock, "Tồn kho khởi tạo khi tạo biến thể", req.user?.id || null]);
         }
         await syncProductStock(productId, connection);
+        await writeAdminActivityLog(connection, req, {
+            action: "create_variant", entityType: "product_variant", entityId: result.insertId,
+            description: "Tạo biến thể sản phẩm",
+            details: { product_id: productId, after: {
+                id: Number(result.insertId), sku, size, color_name: colorName,
+                color_code: colorCode, price, stock, status
+            }, opening_stock: stock }
+        });
         await connection.commit();
         return res.status(201).json({ success: true, variantId: result.insertId, message: 'Đã tạo biến thể và ghi nhận tồn kho khởi tạo.' });
     } catch (error) {
@@ -645,7 +700,7 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
     }
     try {
-        const [[currentVariant]] = await pool.execute('SELECT stock FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
+        const [[currentVariant]] = await pool.execute('SELECT id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
         if (!currentVariant) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
         if (Number(currentVariant.stock) !== stock) {
             return res.status(409).json({ success: false, message: 'Không sửa tồn kho trực tiếp tại form biến thể. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử.' });
@@ -656,6 +711,14 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
             if (!existing.length) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
         }
         await syncProductStock(productId);
+        const [[afterVariant]] = await pool.execute('SELECT id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
+        try {
+            await writeAdminActivityLog(pool, req, {
+                action: "update_variant", entityType: "product_variant", entityId: variantId,
+                description: "Cập nhật biến thể sản phẩm",
+                details: { product_id: productId, before: currentVariant, after: afterVariant }
+            });
+        } catch (auditError) { console.error("Không thể ghi snapshot biến thể:", auditError); }
         return res.json({ success: true, message: 'Đã cập nhật biến thể.' });
     } catch (error) {
         if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
@@ -670,9 +733,17 @@ router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
     const status = String(req.body.status || '').trim();
     if (!productId || !variantId || !PRODUCT_STATUSES.includes(status)) return res.status(400).json({ success: false, message: 'Biến thể hoặc trạng thái không hợp lệ.' });
     try {
-        const [result] = await pool.execute('UPDATE product_variants SET status=? WHERE id=? AND product_id=?', [status, variantId, productId]);
-        if (!result.affectedRows) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        const [[before]] = await pool.execute('SELECT id, sku, size, color_name, status, stock FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
+        if (!before) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        await pool.execute('UPDATE product_variants SET status=? WHERE id=? AND product_id=?', [status, variantId, productId]);
         await syncProductStock(productId);
+        try {
+            await writeAdminActivityLog(pool, req, {
+                action: "change_variant_status", entityType: "product_variant", entityId: variantId,
+                description: "Thay đổi trạng thái biến thể",
+                details: { product_id: productId, before: { status: before.status }, after: { status }, sku: before.sku, size: before.size, color_name: before.color_name, stock: Number(before.stock) }
+            });
+        } catch (auditError) { console.error("Không thể ghi snapshot trạng thái biến thể:", auditError); }
         return res.json({ success: true, message: 'Đã cập nhật trạng thái biến thể.' });
     } catch (error) { return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.'); }
 });
