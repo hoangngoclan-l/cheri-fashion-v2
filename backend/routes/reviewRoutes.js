@@ -51,6 +51,32 @@ router.get("/products/:productId", async (req, res) => {
     }
 });
 
+// Customer: lấy các dòng hàng đủ điều kiện đánh giá trên trang sản phẩm.
+router.get("/eligible/:productId", authMiddleware, async (req, res) => {
+    const productId = Number(req.params.productId);
+    if (!Number.isSafeInteger(productId) || productId <= 0) {
+        return res.status(400).json({ success: false, message: "Mã sản phẩm không hợp lệ." });
+    }
+    try {
+        const [items] = await pool.execute(
+            `SELECT oi.id AS order_item_id, oi.order_id, o.order_code,
+                    oi.product_name, oi.size, oi.color_name, oi.quantity, o.created_at
+             FROM order_items oi
+             INNER JOIN orders o ON o.id = oi.order_id
+             LEFT JOIN product_reviews r ON r.order_item_id = oi.id
+             WHERE oi.product_id = ? AND o.user_id = ?
+               AND o.order_status = 'completed' AND o.payment_status = 'paid'
+               AND r.id IS NULL
+             ORDER BY o.created_at DESC, oi.id DESC`,
+            [productId, req.user.id]
+        );
+        return res.json({ success: true, items });
+    } catch (error) {
+        console.error("Lỗi tải sản phẩm đủ điều kiện đánh giá:", error);
+        return res.status(500).json({ success: false, message: "Không thể tải quyền đánh giá sản phẩm." });
+    }
+});
+
 // Customer: chỉ tài khoản có đơn đã hoàn thành và thanh toán mới được đánh giá đúng dòng hàng đã mua.
 router.post("/", authMiddleware, async (req, res) => {
     const orderId = Number(req.body.order_id);
