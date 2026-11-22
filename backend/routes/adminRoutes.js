@@ -87,6 +87,96 @@ router.get("/categories", async (req, res) => {
     }
 });
 
+// GET /api/admin/categories/manage — all categories for administration.
+router.get("/categories/manage", async (req, res) => {
+    try {
+        const [rows] = await pool.execute(`
+            SELECT c.id, c.name, c.slug, c.is_active,
+                   COUNT(p.id) AS product_count
+            FROM categories c
+            LEFT JOIN products p ON p.category_slug = c.slug
+            GROUP BY c.id, c.name, c.slug, c.is_active
+            ORDER BY c.id ASC
+        `);
+        return res.json({ success: true, categories: rows });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải danh sách quản lý danh mục.");
+    }
+});
+
+// POST /api/admin/categories
+router.post("/categories", async (req, res) => {
+    const name = String((req.body || {}).name || "").trim();
+    const slug = String((req.body || {}).slug || "").trim().toLowerCase();
+    if (!name || name.length > 120 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 150) {
+        return res.status(400).json({ success: false, message: "Tên hoặc slug danh mục không hợp lệ." });
+    }
+    try {
+        const [result] = await pool.execute(
+            "INSERT INTO categories (name, slug, is_active) VALUES (?, ?, 1)",
+            [name, slug]
+        );
+        return res.status(201).json({ success: true, categoryId: result.insertId, message: "Đã tạo danh mục." });
+    } catch (error) {
+        if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Tên hoặc slug danh mục đã tồn tại." });
+        return sendError(res, error, "Không thể tạo danh mục.");
+    }
+});
+
+// PUT /api/admin/categories/:id — keep existing product labels/slugs in sync atomically.
+router.put("/categories/:id", async (req, res) => {
+    const id = positiveId(req.params.id);
+    const name = String((req.body || {}).name || "").trim();
+    const slug = String((req.body || {}).slug || "").trim().toLowerCase();
+    if (!id) return res.status(400).json({ success: false, message: "ID danh mục không hợp lệ." });
+    if (!name || name.length > 120 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 150) {
+        return res.status(400).json({ success: false, message: "Tên hoặc slug danh mục không hợp lệ." });
+    }
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [[current]] = await connection.execute(
+            "SELECT id, name, slug FROM categories WHERE id = ? FOR UPDATE", [id]
+        );
+        if (!current) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
+        }
+        await connection.execute("UPDATE categories SET name = ?, slug = ? WHERE id = ?", [name, slug, id]);
+        await connection.execute(
+            "UPDATE products SET category = ?, category_slug = ? WHERE category_slug = ?",
+            [name, slug, current.slug]
+        );
+        await connection.commit();
+        return res.json({ success: true, message: "Đã cập nhật danh mục và đồng bộ sản phẩm liên quan." });
+    } catch (error) {
+        await connection.rollback();
+        if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Tên hoặc slug danh mục đã tồn tại." });
+        return sendError(res, error, "Không thể cập nhật danh mục.");
+    } finally {
+        connection.release();
+    }
+});
+
+// PATCH /api/admin/categories/:id/status — never delete category records.
+router.patch("/categories/:id/status", async (req, res) => {
+    const id = positiveId(req.params.id);
+    const status = String((req.body || {}).status || "");
+    if (!id || !["active", "inactive"].includes(status)) {
+        return res.status(400).json({ success: false, message: "Thông tin trạng thái danh mục không hợp lệ." });
+    }
+    try {
+        const [result] = await pool.execute(
+            "UPDATE categories SET is_active = ? WHERE id = ?",
+            [status === "active" ? 1 : 0, id]
+        );
+        if (!result.affectedRows) return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
+        return res.json({ success: true, message: status === "active" ? "Đã kích hoạt danh mục." : "Đã ngừng kích hoạt danh mục." });
+    } catch (error) {
+        return sendError(res, error, "Không thể cập nhật trạng thái danh mục.");
+    }
+});
+
 // GET /api/admin/products
 router.get("/products", async (req, res) => {
     try {
