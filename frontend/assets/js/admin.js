@@ -61,12 +61,13 @@
     function setView(view) {
         document.querySelectorAll(".admin-view").forEach(el => el.classList.toggle("active", el.id === "view-" + view));
         document.querySelectorAll(".admin-nav a").forEach(el => el.classList.toggle("active", el.dataset.view === view));
-        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh",reviews:"Kiểm duyệt đánh giá","activity-logs":"Nhật ký hoạt động"})[view] || "Quản trị";
+        $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng",inventory:"Quản lý kho hàng",reports:"Báo cáo kinh doanh",reviews:"Kiểm duyệt đánh giá",support:"Hỗ trợ khách hàng","activity-logs":"Nhật ký hoạt động"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
         if (view === "products") { loadProducts(); loadCategoryManagement(); }
         if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
         if (view === "reviews") loadReviews();
+        if (view === "support") loadSupportInbox();
         if (view === "inventory") { loadInventoryProducts(); loadInventory(); }
         if (view === "reports") loadReports();
         if (view === "activity-logs") loadActivityLogs();
@@ -620,10 +621,107 @@
         } catch (error) { alertMessage(error.message, true); }
     }
 
+
+    let activeSupportConversationId = null;
+    let supportConversations = [];
+    async function supportApi(path, options = {}) {
+        const response = await fetch("/api/chat/admin" + path, {
+            ...options,
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token(), ...(options.headers || {}) }
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.success) throw new Error(data.message || "Không thể thao tác hộp thư hỗ trợ.");
+        return data;
+    }
+    async function loadSupportInbox() {
+        try {
+            const status = $("support-status-filter").value;
+            const data = await supportApi("/conversations" + (status ? "?status=" + encodeURIComponent(status) : ""));
+            supportConversations = data.conversations || [];
+            $("support-conversation-list").innerHTML = supportConversations.length ? supportConversations.map(item => {
+                const label = ({waiting_admin:"Chờ nhân viên",admin_active:"Đang hỗ trợ",ai_active:"AI tư vấn",closed:"Đã kết thúc"})[item.status] || item.status;
+                const who = item.customer_name || (item.user_id ? "Khách hàng" : "Khách vãng lai");
+                return `<button type="button" class="support-conversation ${item.id === activeSupportConversationId ? "active" : ""}" data-support-open="${escapeHtml(item.id)}">
+                    <span class="support-conversation-top"><strong>${escapeHtml(who)}</strong><small>${escapeHtml(label)}</small></span>
+                    <span class="support-conversation-preview">${escapeHtml(item.last_message || "Chưa có tin nhắn")}</span>
+                    <small class="support-conversation-time">${date(item.last_message_at)}</small>
+                </button>`;
+            }).join("") : '<p class="empty-row">Chưa có cuộc trò chuyện nào.</p>';
+            if (activeSupportConversationId && !supportConversations.some(item => item.id === activeSupportConversationId)) {
+                activeSupportConversationId = null;
+                resetSupportChat();
+            }
+        } catch (error) { alertMessage(error.message, true); }
+    }
+    function resetSupportChat() {
+        $("support-chat-title").textContent = "Chọn cuộc trò chuyện";
+        $("support-chat-meta").textContent = "Nội dung trao đổi với khách hàng sẽ hiển thị tại đây.";
+        $("support-chat-messages").innerHTML = '<p class="empty-row">Chưa chọn cuộc trò chuyện.</p>';
+        ["support-claim","support-return-ai","support-close","support-reply","support-send"].forEach(id => $(id).disabled = true);
+    }
+    async function openSupportConversation(id) {
+        activeSupportConversationId = id;
+        try {
+            const [conversation, data] = [
+                supportConversations.find(item => item.id === id),
+                await supportApi("/conversations/" + encodeURIComponent(id) + "/messages")
+            ];
+            $("support-chat-title").textContent = conversation?.customer_name || (conversation?.user_id ? "Khách hàng" : "Khách vãng lai");
+            $("support-chat-meta").textContent = "Trạng thái: " + (conversation?.status || data.status || "—") + (conversation?.customer_email ? " · " + conversation.customer_email : "");
+            $("support-chat-messages").innerHTML = (data.messages || []).map(message => {
+                const sender = ({customer:"Khách hàng",assistant:"AI CHERI",admin:"Nhân viên",system:"Hệ thống"})[message.sender_type] || message.sender_type;
+                return `<article class="support-message ${escapeHtml(message.sender_type)}"><strong>${sender}</strong><p>${escapeHtml(message.content)}</p><small>${date(message.created_at)}</small></article>`;
+            }).join("") || '<p class="empty-row">Chưa có tin nhắn.</p>';
+            $("support-chat-messages").scrollTop = $("support-chat-messages").scrollHeight;
+            const status = conversation?.status;
+            const isClaimed = status === "admin_active" && String(conversation?.assigned_admin_id) === String(user()?.id);
+            $("support-claim").disabled = status === "closed" || isClaimed;
+            $("support-return-ai").disabled = status !== "admin_active" || !isClaimed;
+            $("support-close").disabled = status === "closed" || !isClaimed;
+            $("support-reply").disabled = !isClaimed;
+            $("support-send").disabled = !isClaimed;
+            $("support-reply-form").dataset.conversationId = id;
+        } catch (error) { alertMessage(error.message, true); }
+    }
+    async function supportAction(path, body = {}) {
+        if (!activeSupportConversationId) return;
+        try {
+            await supportApi("/conversations/" + encodeURIComponent(activeSupportConversationId) + path, {
+                method: path === "/claim" ? "PATCH" : "PATCH",
+                body: JSON.stringify(body)
+            });
+            await loadSupportInbox();
+            await openSupportConversation(activeSupportConversationId);
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
         if (!requireAdmin()) return;
         document.querySelectorAll("[data-view]").forEach(link => link.addEventListener("click", event => { event.preventDefault(); setView(link.dataset.view); }));
         document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => setView(button.dataset.go)));
+
+        $("support-refresh").addEventListener("click", loadSupportInbox);
+        $("support-status-filter").addEventListener("change", loadSupportInbox);
+        $("support-conversation-list").addEventListener("click", event => {
+            const button = event.target.closest("[data-support-open]");
+            if (button) openSupportConversation(button.dataset.supportOpen);
+        });
+        $("support-claim").addEventListener("click", () => supportAction("/claim"));
+        $("support-return-ai").addEventListener("click", () => supportAction("/status", { status: "ai_active" }));
+        $("support-close").addEventListener("click", () => supportAction("/status", { status: "closed" }));
+        $("support-reply-form").addEventListener("submit", async event => {
+            event.preventDefault();
+            const field = $("support-reply");
+            const content = field.value.trim();
+            if (!content || !activeSupportConversationId) return;
+            try {
+                await supportApi("/conversations/" + encodeURIComponent(activeSupportConversationId) + "/messages", { method: "POST", body: JSON.stringify({ content }) });
+                field.value = "";
+                await loadSupportInbox();
+                await openSupportConversation(activeSupportConversationId);
+            } catch (error) { alertMessage(error.message, true); }
+        });
+
         $("admin-logout").addEventListener("click", () => CHERI_AUTH.logout());
         $("close-order-detail").addEventListener("click", () => $("order-detail-dialog").close());
         $("close-order-detail-footer").addEventListener("click", () => $("order-detail-dialog").close());
