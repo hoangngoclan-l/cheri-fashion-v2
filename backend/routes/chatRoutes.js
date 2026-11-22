@@ -198,7 +198,16 @@ router.post("/conversations/:id/messages", optionalCustomerAuth, async (req, res
             orderContext = orders;
         }
         const ai = await generateAssistantReply(message, products, orderContext);
-        if (ai.handoff) await pool.execute("UPDATE chat_conversations SET status = 'waiting_admin' WHERE id = ?", [conversation.id]);
+        const [[latestConversation]] = await pool.execute(
+            "SELECT status FROM chat_conversations WHERE id = ? LIMIT 1",
+            [conversation.id]
+        );
+        // Nếu nhân viên vừa nhận cuộc trò chuyện trong lúc AI đang xử lý,
+        // không ghi hoặc gửi câu trả lời AI để tránh hai bên trả lời đồng thời.
+        if (!latestConversation || latestConversation.status === "admin_active" || latestConversation.status === "closed") {
+            return res.json({ success: true, answer: "Cuộc trò chuyện đang được nhân viên CHERI tiếp nhận. Vui lòng chờ phản hồi.", handoff: true });
+        }
+        if (ai.handoff) await pool.execute("UPDATE chat_conversations SET status = 'waiting_admin' WHERE id = ? AND status = 'ai_active'", [conversation.id]);
         await addMessage(pool, conversation.id, "assistant", ai.answer, null, { handoff: ai.handoff, reason: ai.reason || null });
         return res.json({ success: true, answer: ai.answer, handoff: ai.handoff });
     } catch (error) {
@@ -244,8 +253,8 @@ router.get("/admin/conversations/:id/messages", async (req, res) => {
 router.patch("/admin/conversations/:id/claim", async (req, res) => {
     try {
         const [result] = await pool.execute(
-            "UPDATE chat_conversations SET status = 'admin_active', assigned_admin_id = ? WHERE id = ? AND status IN ('waiting_admin','ai_active','admin_active')",
-            [req.user.id, req.params.id]
+            "UPDATE chat_conversations SET status = 'admin_active', assigned_admin_id = ? WHERE id = ? AND status IN ('waiting_admin','ai_active','admin_active') AND (assigned_admin_id IS NULL OR assigned_admin_id = ?)",
+            [req.user.id, req.params.id, req.user.id]
         );
         if (!result.affectedRows) return res.status(404).json({ success: false, message: "Cuộc trò chuyện không tồn tại hoặc đã đóng." });
         return res.json({ success: true, message: "Đã nhận hỗ trợ cuộc trò chuyện." });
