@@ -321,22 +321,40 @@ router.post("/categories", async (req, res) => {
     if (!name || name.length > 120 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 150) {
         return res.status(400).json({ success: false, message: "Tên hoặc slug danh mục không hợp lệ." });
     }
+
+    let connection;
     try {
-        const [result] = await pool.execute(
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [result] = await connection.execute(
             "INSERT INTO categories (name, slug, is_active) VALUES (?, ?, 1)",
             [name, slug]
         );
-        try {
-            await writeAdminActivityLog(pool, req, {
-                action: "create_category", entityType: "category", entityId: result.insertId,
-                description: "Tạo danh mục",
-                details: { after: { id: Number(result.insertId), name, slug, is_active: 1 } }
-            });
-        } catch (auditError) { console.error("Không thể ghi snapshot danh mục:", auditError); }
-        return res.status(201).json({ success: true, categoryId: result.insertId, message: "Đã tạo danh mục." });
+        await writeAdminActivityLog(connection, req, {
+            action: "create_category",
+            entityType: "category",
+            entityId: result.insertId,
+            description: "Tạo danh mục",
+            details: { after: { id: Number(result.insertId), name, slug, is_active: 1 } }
+        });
+        await connection.commit();
+        return res.status(201).json({
+            success: true,
+            categoryId: result.insertId,
+            message: "Đã tạo danh mục."
+        });
     } catch (error) {
-        if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Tên hoặc slug danh mục đã tồn tại." });
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback tạo danh mục thất bại:", rollbackError);
+            }
+        }
+        if (error.code === "ER_DUP_ENTRY") {
+            return res.status(409).json({ success: false, message: "Tên hoặc slug danh mục đã tồn tại." });
+        }
         return sendError(res, error, "Không thể tạo danh mục.");
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -1548,27 +1566,49 @@ router.get("/customers/:id", async (req, res) => {
 // PATCH /api/admin/customers/:id/status
 router.patch("/customers/:id/status", async (req, res) => {
     const id = positiveId(req.params.id);
-    const status = String(req.body.status || "").trim();
+    const status = String((req.body || {}).status || "").trim();
     if (!id || !["active", "inactive", "blocked"].includes(status)) {
         return res.status(400).json({ success: false, message: "Khách hàng hoặc trạng thái không hợp lệ." });
     }
+
+    let connection;
     try {
-        const [result] = await pool.execute(
-            "UPDATE users SET status=? WHERE id=? AND role='customer'",
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [[before]] = await connection.execute(
+            "SELECT id, status FROM users WHERE id = ? AND role = 'customer' FOR UPDATE",
+            [id]
+        );
+        if (!before) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng." });
+        }
+
+        await connection.execute(
+            "UPDATE users SET status = ? WHERE id = ? AND role = 'customer'",
             [status, id]
         );
-        if (!result.affectedRows) {
-            const [existing] = await pool.execute(
-                "SELECT id FROM users WHERE id = ? AND role = 'customer' LIMIT 1",
-                [id]
-            );
-            if (!existing.length) {
-                return res.status(404).json({ success: false, message: "Không tìm thấy khách hàng." });
+        await writeAdminActivityLog(connection, req, {
+            action: "change_customer_status",
+            entityType: "customer",
+            entityId: id,
+            description: "Thay đổi trạng thái tài khoản khách hàng",
+            details: {
+                before: { status: before.status },
+                after: { status }
             }
-        }
+        });
+        await connection.commit();
         return res.json({ success: true, message: "Đã cập nhật trạng thái khách hàng." });
     } catch (error) {
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback trạng thái khách hàng thất bại:", rollbackError);
+            }
+        }
         return sendError(res, error, "Không thể cập nhật khách hàng.");
+    } finally {
+        if (connection) connection.release();
     }
 });
 
