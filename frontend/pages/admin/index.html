@@ -17,6 +17,7 @@
                 <a href="#orders" data-view="orders">▤ <span>Đơn hàng</span></a>
                 <a href="#inventory" data-view="inventory">▧ <span>Kho hàng</span></a>
                 <a href="#customers" data-view="customers">♙ <span>Khách hàng</span></a>
+                <a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a>
                 <a href="#reports" data-view="reports">▥ <span>Báo cáo</span></a>
                 <a href="#activity-logs" data-view="activity-logs">◷ <span>Nhật ký</span></a>
             </nav>
@@ -101,6 +102,17 @@
                 </div>
                 <div class="toolbar"><input id="inventory-search" type="search" placeholder="Tìm sản phẩm hoặc SKU"><select id="inventory-type"><option value="">Tất cả biến động</option><option value="adjustment_in">Nhập kho thủ công</option><option value="adjustment_out">Xuất kho thủ công</option><option value="order_out">Xuất theo đơn hàng</option><option value="order_return">Hoàn kho do hủy đơn</option></select></div>
                 <div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Thời điểm</th><th>Sản phẩm / biến thể</th><th>Loại</th><th>SL</th><th>Tồn trước</th><th>Tồn sau</th><th>Tham chiếu</th><th>Người thực hiện</th><th>Ghi chú</th></tr></thead><tbody id="inventory-movements-table"><tr><td colspan="9" class="empty-row">Đang tải lịch sử...</td></tr></tbody></table></div><div class="dialog-actions"><button type="button" class="button button-light" id="inventory-prev">Trang trước</button><span id="inventory-page-label">Trang 1</span><button type="button" class="button button-light" id="inventory-next">Trang sau</button></div></div>
+            </section>
+            <section class="admin-view" id="view-reviews">
+                <div class="reports-toolbar admin-panel">
+                    <div><p class="eyebrow">CUSTOMER VOICE</p><h2>Kiểm duyệt đánh giá</h2><p class="category-help">Chỉ đánh giá từ đơn hàng đã hoàn thành và thanh toán mới được gửi. Nội dung chỉ hiển thị công khai sau khi được duyệt.</p></div>
+                    <form id="review-admin-filter" class="reports-filter">
+                        <label>Tìm kiếm<input id="review-admin-search" type="search" placeholder="Sản phẩm, khách hàng, nội dung"></label>
+                        <label>Trạng thái<select id="review-admin-status"><option value="">Tất cả</option><option value="pending">Chờ duyệt</option><option value="approved">Đã duyệt</option><option value="rejected">Đã từ chối</option></select></label>
+                        <button type="submit" class="button button-primary">Lọc đánh giá</button>
+                    </form>
+                </div>
+                <div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Ngày gửi</th><th>Sản phẩm</th><th>Khách hàng</th><th>Số sao</th><th>Nội dung</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="admin-reviews-table"><tr><td colspan="7" class="empty-row">Chọn mục Đánh giá để tải dữ liệu.</td></tr></tbody></table></div></div>
             </section>
             <section class="admin-view" id="view-customers"><div class="toolbar"><input id="customer-search" type="search" placeholder="Tìm tên, email hoặc số điện thoại"></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Khách hàng</th><th>Email</th><th>Số điện thoại</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="customers-table"><tr><td colspan="6">Chọn mục Khách hàng để tải dữ liệu.</td></tr></tbody></table></div></div></section>
         </main>
