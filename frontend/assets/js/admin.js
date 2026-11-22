@@ -389,11 +389,35 @@
         } catch (error) { alertMessage(error.message, true); }
     }
 
+    async function loadCustomerDetail(customerId) {
+        try {
+            const data = await api("/customers/" + customerId);
+            const c = data.customer, summary = data.summary || {};
+            $("customer-detail-title").textContent = c.full_name || "Hồ sơ khách hàng";
+            $("customer-detail-summary").innerHTML = `
+                <div><span>Email</span><strong>${escapeHtml(c.email)}</strong></div>
+                <div><span>Số điện thoại</span><strong>${escapeHtml(c.phone || "Chưa cập nhật")}</strong></div>
+                <div><span>Ngày tham gia</span><strong>${date(c.created_at)}</strong></div>
+                <div><span>Trạng thái</span><strong>${escapeHtml(statusText(c.status))}</strong></div>
+                <div><span>Tổng đơn</span><strong>${Number(summary.total_orders || 0)}</strong></div>
+                <div><span>Đã thu</span><strong>${money(summary.collected_amount)}</strong></div>
+                <div><span>Chưa thu</span><strong>${money(summary.outstanding_amount)}</strong></div>
+            `;
+            $("customer-orders-table").innerHTML = (data.orders || []).length ? data.orders.map(o => `
+                <tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td>
+                <td><span class="pill ${paymentStatusClass(o.payment_status)}">${escapeHtml(paymentStatusText(o.payment_status))}</span></td>
+                <td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td>
+                <td><button type="button" class="table-action" data-order-detail="${o.id}" data-close-customer-detail="true">Chi tiết</button></td></tr>`
+            ).join("") : '<tr><td colspan="6" class="empty-row">Khách hàng chưa có đơn hàng.</td></tr>';
+            $("customer-detail-dialog").showModal();
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
     async function loadCustomers() {
         try {
             const q = encodeURIComponent($("customer-search").value.trim());
             const data = await api("/customers?q=" + q);
-            $("customers-table").innerHTML = data.customers.length ? data.customers.map(c => `<tr><td><strong>${escapeHtml(c.full_name)}</strong><br><small>#${c.id}</small></td><td>${escapeHtml(c.email)}</td><td>${escapeHtml(c.phone || "—")}</td><td>${date(c.created_at)}</td><td><span class="pill ${statusClass(c.status)}">${statusText(c.status)}</span></td><td><button class="table-action" data-customer-id="${c.id}" data-customer-status="${c.status}">${c.status === "active" ? "Khóa tài khoản" : "Mở khóa"}</button></td></tr>`).join("") : '<tr><td colspan="6" class="empty-row">Chưa có khách hàng.</td></tr>';
+            $("customers-table").innerHTML = data.customers.length ? data.customers.map(c => `<tr><td><button type="button" class="table-action customer-name-action" data-customer-detail="${c.id}">${escapeHtml(c.full_name)}</button><br><small>#${c.id}</small></td><td>${escapeHtml(c.email)}</td><td>${escapeHtml(c.phone || "—")}</td><td>${date(c.created_at)}</td><td><span class="pill ${statusClass(c.status)}">${statusText(c.status)}</span></td><td><button class="table-action" data-customer-id="${c.id}" data-customer-status="${c.status}">${c.status === "active" ? "Khóa tài khoản" : "Mở khóa"}</button></td></tr>`).join("") : '<tr><td colspan="6" class="empty-row">Chưa có khách hàng.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
 
@@ -404,6 +428,7 @@
         $("admin-logout").addEventListener("click", () => CHERI_AUTH.logout());
         $("close-order-detail").addEventListener("click", () => $("order-detail-dialog").close());
         $("close-order-detail-footer").addEventListener("click", () => $("order-detail-dialog").close());
+        $("close-customer-detail").addEventListener("click", () => $("customer-detail-dialog").close());
         $("product-search").addEventListener("input", debounce(loadProducts, 300));
         $("order-search").addEventListener("input", debounce(loadOrders, 300));
         $("order-status").addEventListener("change", loadOrders);
@@ -470,6 +495,9 @@
             const toggleVariantButton = event.target.closest("[data-toggle-variant]");
             const remove = event.target.closest("[data-delete-product]");
             const customer = event.target.closest("[data-customer-id]");
+            const customerDetail = event.target.closest("[data-customer-detail]");
+            if (customerDetail) { await loadCustomerDetail(customerDetail.dataset.customerDetail); return; }
+            if (event.target.closest("[data-close-customer-detail]")) $("customer-detail-dialog").close();
             const orderDetail = event.target.closest("[data-order-detail]");
             const confirmCod = event.target.closest("[data-order-payment-confirm]");
             if (confirmCod) {
