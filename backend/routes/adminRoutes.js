@@ -387,26 +387,51 @@ router.patch("/categories/:id/status", async (req, res) => {
     if (!id || !["active", "inactive"].includes(status)) {
         return res.status(400).json({ success: false, message: "Thông tin trạng thái danh mục không hợp lệ." });
     }
+
+    let connection;
     try {
-        const [[before]] = await pool.execute("SELECT id, name, slug, is_active FROM categories WHERE id = ? LIMIT 1", [id]);
-        if (!before) return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
-        const [result] = await pool.execute(
-            "UPDATE categories SET is_active = ? WHERE id = ?",
-            [status === "active" ? 1 : 0, id]
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [[before]] = await connection.execute(
+            "SELECT id, name, slug, is_active FROM categories WHERE id = ? FOR UPDATE",
+            [id]
         );
-        if (!result.affectedRows && Number(before.is_active) !== (status === "active" ? 1 : 0)) {
+        if (!before) {
+            await connection.rollback();
             return res.status(404).json({ success: false, message: "Không tìm thấy danh mục." });
         }
-        try {
-            await writeAdminActivityLog(pool, req, {
-                action: "change_category_status", entityType: "category", entityId: id,
-                description: "Thay đổi trạng thái danh mục",
-                details: { before: { is_active: Number(before.is_active) }, after: { is_active: status === "active" ? 1 : 0 }, name: before.name, slug: before.slug }
-            });
-        } catch (auditError) { console.error("Không thể ghi snapshot trạng thái danh mục:", auditError); }
-        return res.json({ success: true, message: status === "active" ? "Đã kích hoạt danh mục." : "Đã ngừng kích hoạt danh mục." });
+
+        const nextActive = status === "active" ? 1 : 0;
+        await connection.execute(
+            "UPDATE categories SET is_active = ? WHERE id = ?",
+            [nextActive, id]
+        );
+        await writeAdminActivityLog(connection, req, {
+            action: "change_category_status",
+            entityType: "category",
+            entityId: id,
+            description: "Thay đổi trạng thái danh mục",
+            details: {
+                before: { is_active: Number(before.is_active) },
+                after: { is_active: nextActive },
+                name: before.name,
+                slug: before.slug
+            }
+        });
+        await connection.commit();
+        return res.json({
+            success: true,
+            message: nextActive ? "Đã kích hoạt danh mục." : "Đã ngừng kích hoạt danh mục."
+        });
     } catch (error) {
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback trạng thái danh mục thất bại:", rollbackError);
+            }
+        }
         return sendError(res, error, "Không thể cập nhật trạng thái danh mục.");
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -601,20 +626,48 @@ router.put("/products/:id", async (req, res) => {
 router.delete("/products/:id", async (req, res) => {
     const id = positiveId(req.params.id);
     if (!id) return res.status(400).json({ success: false, message: "ID sản phẩm không hợp lệ." });
+
+    let connection;
     try {
-        const [[before]] = await pool.execute("SELECT id, product_code, name, status, stock FROM products WHERE id = ? LIMIT 1", [id]);
-        if (!before) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
-        await pool.execute("UPDATE products SET status='inactive' WHERE id=?", [id]);
-        try {
-            await writeAdminActivityLog(pool, req, {
-                action: "archive_product", entityType: "product", entityId: id,
-                description: "Ngừng kinh doanh sản phẩm",
-                details: { before: { status: before.status }, after: { status: "inactive" }, product_code: before.product_code, name: before.name, stock: Number(before.stock) }
-            });
-        } catch (auditError) { console.error("Không thể ghi snapshot lưu trữ sản phẩm:", auditError); }
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [[before]] = await connection.execute(
+            "SELECT id, product_code, name, status, stock FROM products WHERE id = ? FOR UPDATE",
+            [id]
+        );
+        if (!before) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+        }
+
+        await connection.execute(
+            "UPDATE products SET status = 'inactive' WHERE id = ?",
+            [id]
+        );
+        await writeAdminActivityLog(connection, req, {
+            action: "archive_product",
+            entityType: "product",
+            entityId: id,
+            description: "Ngừng kinh doanh sản phẩm",
+            details: {
+                before: { status: before.status },
+                after: { status: "inactive" },
+                product_code: before.product_code,
+                name: before.name,
+                stock: Number(before.stock)
+            }
+        });
+        await connection.commit();
         return res.json({ success: true, message: "Đã ngừng kinh doanh sản phẩm." });
     } catch (error) {
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback lưu trữ sản phẩm thất bại:", rollbackError);
+            }
+        }
         return sendError(res, error, "Không thể ngừng kinh doanh sản phẩm.");
+    } finally {
+        if (connection) connection.release();
     }
 });
 
