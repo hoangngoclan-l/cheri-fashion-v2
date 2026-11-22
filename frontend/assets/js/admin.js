@@ -11,6 +11,7 @@
     const statusClass = value => ["completed","active"].includes(value) ? "success" : ["pending","confirmed","processing","shipping"].includes(value) ? "warn" : ["cancelled","blocked","inactive","out_of_stock"].includes(value) ? "danger" : "";
     const paymentStatusText = value => ({unpaid:"Chưa thanh toán",paid:"Đã thanh toán",pending:"Đang xử lý",failed:"Thanh toán thất bại",refunded:"Đã hoàn tiền",partially_refunded:"Hoàn tiền một phần"})[value] || value || "Chưa rõ";
     const paymentStatusClass = value => value === "paid" ? "success" : value === "unpaid" ? "warn" : ["failed","refunded"].includes(value) ? "danger" : "";
+    const paymentMethodText = value => ({cod:"COD · Khi nhận hàng",bank_transfer:"Chuyển khoản",online:"Thanh toán trực tuyến"})[value] || value || "Chưa xác định";
     const ORDER_TRANSITIONS = {
         pending: ["confirmed", "cancelled"],
         confirmed: ["processing", "cancelled"],
@@ -251,7 +252,7 @@
                 <article class="payment-summary-card"><span>Đơn đã hủy</span><strong>${Number(totals.cancelled_orders || 0).toLocaleString("vi-VN")}</strong><small>Hiển thị riêng, không cộng vào đối soát</small></article>
             `;
             $("payment-breakdown").innerHTML = (data.breakdown || []).length ? data.breakdown.map(row =>
-                `<span class="payment-breakdown-item">${escapeHtml(row.payment_method || "Chưa xác định")} · ${escapeHtml(paymentStatusText(row.payment_status))}: <strong>${Number(row.order_count || 0)} đơn</strong> · ${money(row.active_amount)}${Number(row.cancelled_count || 0) ? ` · ${Number(row.cancelled_count)} đã hủy` : ""}</span>`
+                `<span class="payment-breakdown-item">${escapeHtml(paymentMethodText(row.payment_method))} · ${escapeHtml(paymentStatusText(row.payment_status))}: <strong>${Number(row.order_count || 0)} đơn</strong> · ${money(row.active_amount)}${Number(row.cancelled_count || 0) ? ` · ${Number(row.cancelled_count)} đã hủy` : ""}</span>`
             ).join("") : '<span class="empty-row">Chưa có dữ liệu thanh toán.</span>';
         } catch (error) { alertMessage(error.message, true); }
     }
@@ -351,7 +352,9 @@
         $("close-order-detail-footer").addEventListener("click", () => $("order-detail-dialog").close());
         $("product-search").addEventListener("input", debounce(loadProducts, 300));
         $("order-search").addEventListener("input", debounce(loadOrders, 300));
-        $("order-status").addEventListener("change", loadOrders);\n        $("order-payment-method").addEventListener("change", loadOrders);\n        $("order-payment-status").addEventListener("change", loadOrders);
+        $("order-status").addEventListener("change", loadOrders);
+        $("order-payment-method").addEventListener("change", loadOrders);
+        $("order-payment-status").addEventListener("change", loadOrders);
         $("customer-search").addEventListener("input", debounce(loadCustomers, 300));
         $("add-product").addEventListener("click", () => openProduct());
         $("close-product-dialog").addEventListener("click", () => $("product-dialog").close());
