@@ -18,6 +18,7 @@
                 <a href="#inventory" data-view="inventory">▧ <span>Kho hàng</span></a>
                 <a href="#customers" data-view="customers">♙ <span>Khách hàng</span></a>
                 <a href="#reports" data-view="reports">▥ <span>Báo cáo</span></a>
+                <a href="#activity-logs" data-view="activity-logs">◷ <span>Nhật ký</span></a>
             </nav>
             <div class="sidebar-bottom"><a href="../index.html">← Xem cửa hàng</a><button id="admin-logout" type="button">Đăng xuất</button></div>
         </aside>
@@ -58,6 +59,22 @@
                     <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">BEST SELLERS</p><h2>Sản phẩm bán chạy</h2></div></div><div id="report-top-products" class="top-products"></div></div>
                 </div>
                 <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">STOCK ALERT</p><h2>Sản phẩm sắp hết hàng</h2></div><button class="button button-light" data-go="inventory">Quản lý kho</button></div><div class="table-scroll"><table><thead><tr><th>Mã sản phẩm</th><th>Sản phẩm</th><th>Tồn hiện tại</th></tr></thead><tbody id="report-low-stock"><tr><td colspan="3" class="empty-row">Đang tải...</td></tr></tbody></table></div></div>
+            </section>
+            <section class="admin-view" id="view-activity-logs">
+                <div class="reports-toolbar admin-panel">
+                    <div><p class="eyebrow">ADMIN AUDIT TRAIL</p><h2>Nhật ký hoạt động quản trị</h2><p class="category-help">Theo dõi các thao tác quản trị được ghi nhận từ thời điểm triển khai. Không có dữ liệu lịch sử trước đó.</p></div>
+                    <form id="activity-log-filter" class="reports-filter">
+                        <label>Từ ngày<input type="date" id="activity-from"></label>
+                        <label>Đến ngày<input type="date" id="activity-to"></label>
+                        <label>Tìm kiếm<input type="search" id="activity-search" placeholder="Tên thao tác, người thực hiện, ID"></label>
+                        <label>Loại thao tác<select id="activity-action"><option value="">Tất cả thao tác</option><option value="confirm_payment">Xác nhận thanh toán</option><option value="change_order_status">Cập nhật đơn hàng</option><option value="adjust_inventory">Điều chỉnh kho</option><option value="create_category">Tạo danh mục</option><option value="update_category">Cập nhật danh mục</option><option value="create_product">Tạo sản phẩm</option><option value="update_product">Cập nhật sản phẩm</option><option value="archive_product">Ngừng kinh doanh sản phẩm</option><option value="create_variant">Tạo biến thể</option><option value="update_variant">Cập nhật biến thể</option><option value="change_customer_status">Cập nhật khách hàng</option></select></label>
+                        <button type="submit" class="button button-primary">Lọc nhật ký</button>
+                    </form>
+                </div>
+                <div class="admin-panel">
+                    <div class="table-scroll"><table><thead><tr><th>Thời điểm</th><th>Người thực hiện</th><th>Thao tác</th><th>Đối tượng</th><th>ID</th><th>Thông tin ghi nhận</th><th>IP</th></tr></thead><tbody id="activity-logs-table"><tr><td colspan="7" class="empty-row">Chọn mục Nhật ký để tải dữ liệu.</td></tr></tbody></table></div>
+                    <div class="dialog-actions"><button type="button" class="button button-light" id="activity-prev">Trang trước</button><span id="activity-page-label">Trang 1</span><button type="button" class="button button-light" id="activity-next">Trang sau</button></div>
+                </div>
             </section>
             <section class="admin-view" id="view-products"><div class="toolbar"><input id="product-search" type="search" placeholder="Tìm tên hoặc mã sản phẩm"><button class="button button-primary" id="add-product">+ Thêm sản phẩm</button></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Sản phẩm</th><th>Mã</th><th>Danh mục</th><th>Giá</th><th>Tồn kho</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="products-table"><tr><td colspan="7">Chọn mục Sản phẩm để tải dữ liệu.</td></tr></tbody></table></div></div><section class="category-management admin-panel">
                 <div class="panel-heading"><div><p class="eyebrow">CATALOG STRUCTURE</p><h2>Quản lý danh mục</h2><p class="category-help">Đổi tên hoặc slug sẽ đồng bộ với sản phẩm đang thuộc danh mục đó. Không xóa danh mục.</p></div></div>
