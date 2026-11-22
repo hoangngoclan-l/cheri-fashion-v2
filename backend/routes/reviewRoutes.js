@@ -53,6 +53,9 @@ router.get("/products/:productId", async (req, res) => {
 
 // Customer: lấy các dòng hàng đủ điều kiện đánh giá trên trang sản phẩm.
 router.get("/eligible/:productId", authMiddleware, async (req, res) => {
+    if (req.user.role !== "customer") {
+        return res.status(403).json({ success: false, message: "Chỉ tài khoản khách hàng mới có quyền đánh giá sản phẩm." });
+    }
     const productId = Number(req.params.productId);
     if (!Number.isSafeInteger(productId) || productId <= 0) {
         return res.status(400).json({ success: false, message: "Mã sản phẩm không hợp lệ." });
@@ -79,6 +82,9 @@ router.get("/eligible/:productId", authMiddleware, async (req, res) => {
 
 // Customer: chỉ tài khoản có đơn đã hoàn thành và thanh toán mới được đánh giá đúng dòng hàng đã mua.
 router.post("/", authMiddleware, async (req, res) => {
+    if (req.user.role !== "customer") {
+        return res.status(403).json({ success: false, message: "Chỉ tài khoản khách hàng mới có quyền gửi đánh giá." });
+    }
     const orderId = Number(req.body.order_id);
     const orderItemId = Number(req.body.order_item_id);
     const rating = Number(req.body.rating);
