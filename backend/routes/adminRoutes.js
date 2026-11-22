@@ -271,15 +271,24 @@ router.put("/products/:id", async (req, res) => {
     }
     try {
         const [[categoryRow]] = await pool.execute(
-            "SELECT id, name, slug FROM categories WHERE id = ? AND is_active = 1 LIMIT 1",
+            "SELECT id, name, slug, is_active FROM categories WHERE id = ? LIMIT 1",
             [categoryId]
         );
 
         if (!categoryRow) {
-            return res.status(400).json({
-                success: false,
-                message: "Danh mục không tồn tại hoặc đã ngừng hoạt động."
-            });
+            return res.status(400).json({ success: false, message: "Danh mục không tồn tại." });
+        }
+        if (Number(categoryRow.is_active) !== 1) {
+            const [[currentProduct]] = await pool.execute(
+                "SELECT id FROM products WHERE id = ? AND category_slug = ? LIMIT 1",
+                [id, categoryRow.slug]
+            );
+            if (!currentProduct) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Danh mục đã ngừng hoạt động. Chỉ sản phẩm đang thuộc danh mục này mới được giữ nguyên danh mục."
+                });
+            }
         }
 
         const [result] = await pool.execute(`
