@@ -14,6 +14,28 @@ const AUDIT_FIELDS = new Set([
     "direction", "quantity", "order_status", "payment_status", "product_id"
 ]);
 
+async function writeAdminActivityLog(executor, req, entry) {
+    const ip = String(req.ip || "").slice(0, 45) || null;
+    const agent = String(req.get("user-agent") || "").slice(0, 255) || null;
+    await executor.execute(
+        `INSERT INTO admin_activity_logs
+            (actor_user_id, action, entity_type, entity_id, description, details, ip_address, user_agent)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+            req.user?.id || null,
+            entry.action,
+            entry.entityType,
+            entry.entityId || null,
+            entry.description,
+            JSON.stringify(entry.details || {}),
+            ip,
+            agent
+        ]
+    );
+    // Prevent the generic response middleware from inserting a duplicate row.
+    req.auditLogged = true;
+}
+
 function auditDescription(method, path) {
     const route = path.split("?")[0];
     if (route.includes("/payment/confirm-cod")) return ["confirm_payment", "order", "Xác nhận đã thu tiền COD"];
@@ -33,7 +55,7 @@ router.use((req, res, next) => {
     if (!["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) return next();
     const originalJson = res.json.bind(res);
     res.json = (payload) => {
-        if (res.statusCode >= 400 || payload?.success !== true) return originalJson(payload);
+        if (req.auditLogged || res.statusCode >= 400 || payload?.success !== true) return originalJson(payload);
         const [action, entityType, description] = auditDescription(req.method, req.path);
         const variantMatch = req.path.match(/\/variants\/(\d+)(?:\/|$)/);
         const match = req.path.match(/\/(\d+)(?:\/|$)/);
@@ -725,6 +747,21 @@ router.post("/inventory/adjust", async (req, res) => {
               (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, note, actor_user_id)
             VALUES (?, ?, ?, ?, ?, ?, 'admin_adjustment', ?, ?)
         `, [productId, variantId, direction === "in" ? "adjustment_in" : "adjustment_out", quantity, before, after, note || null, req.user?.id || null]);
+        await writeAdminActivityLog(connection, req, {
+            action: "adjust_inventory",
+            entityType: variantId !== null ? "product_variant" : "product",
+            entityId: variantId !== null ? variantId : productId,
+            description: "Điều chỉnh tồn kho",
+            details: {
+                product_id: productId,
+                variant_id: variantId,
+                direction,
+                quantity,
+                stock_before: before,
+                stock_after: after,
+                movement_type: direction === "in" ? "adjustment_in" : "adjustment_out"
+            }
+        });
         await connection.commit();
         return res.json({ success: true, message: "Đã điều chỉnh tồn kho và ghi lịch sử.", stock_before: before, stock_after: after });
     } catch (error) {
@@ -936,6 +973,18 @@ router.post("/orders/:id/payment/confirm-cod", async (req, res) => {
             [id, "Admin xác nhận đã thu tiền COD sau khi giao hàng hoàn tất.", req.user.id]
         );
 
+        await writeAdminActivityLog(connection, req, {
+            action: "confirm_payment",
+            entityType: "order",
+            entityId: id,
+            description: "Xác nhận đã thu tiền COD",
+            details: {
+                payment_status: { before: order.payment_status, after: "paid" },
+                payment_method: order.payment_method,
+                order_status: order.order_status
+            }
+        });
+
         await connection.commit();
         transactionStarted = false;
         return res.json({ success: true, message: "Đã xác nhận thu tiền COD và lưu lịch sử thanh toán." });
@@ -1067,6 +1116,7 @@ router.patch("/orders/:id/status", async (req, res) => {
             });
         }
 
+        const inventoryChanges = [];
         if (status === "cancelled") {
             const [items] = await connection.execute(
                 "SELECT variant_id, product_id, quantity FROM order_items WHERE order_id = ?",
@@ -1116,6 +1166,13 @@ router.patch("/orders/:id/status", async (req, res) => {
                           (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, note, actor_user_id)
                         VALUES (?, ?, 'order_return', ?, ?, ?, 'order', ?, ?, ?)
                     `, [item.product_id, item.variant_id, item.quantity, variantStockBefore, variantStockBefore + Number(item.quantity), id, "Hoàn kho do hủy đơn hàng", req.user?.id || null]);
+                    inventoryChanges.push({
+                        product_id: Number(item.product_id),
+                        variant_id: Number(item.variant_id),
+                        quantity: Number(item.quantity),
+                        stock_before: variantStockBefore,
+                        stock_after: variantStockBefore + Number(item.quantity)
+                    });
 
                     await connection.execute(
                         `UPDATE products
@@ -1143,6 +1200,13 @@ router.patch("/orders/:id/status", async (req, res) => {
                           (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, note, actor_user_id)
                         VALUES (?, NULL, 'order_return', ?, ?, ?, 'order', ?, ?, ?)
                     `, [item.product_id, item.quantity, productStockBefore, productStockBefore + Number(item.quantity), id, "Hoàn kho do hủy đơn hàng", req.user?.id || null]);
+                    inventoryChanges.push({
+                        product_id: Number(item.product_id),
+                        variant_id: null,
+                        quantity: Number(item.quantity),
+                        stock_before: productStockBefore,
+                        stock_after: productStockBefore + Number(item.quantity)
+                    });
                 }
             }
         }
@@ -1163,6 +1227,18 @@ router.patch("/orders/:id/status", async (req, res) => {
              VALUES (?, ?, ?, ?)`,
             [id, current, status, req.user?.id || null]
         );
+
+        await writeAdminActivityLog(connection, req, {
+            action: "change_order_status",
+            entityType: "order",
+            entityId: id,
+            description: status === "cancelled" ? "Hủy đơn hàng và hoàn kho" : "Cập nhật trạng thái đơn hàng",
+            details: {
+                order_status: { before: current, after: status },
+                payment_status: orders[0].payment_status,
+                inventory_returns: inventoryChanges
+            }
+        });
 
         await commitTransaction();
 
