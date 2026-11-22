@@ -261,6 +261,7 @@
                 <div><span>Địa chỉ giao hàng</span><strong>${escapeHtml(order.shipping_address || "—")}</strong></div>
                 <div><span>Phương thức thanh toán</span><strong>${escapeHtml(order.payment_method || "—")}</strong></div>
                 <div><span>Trạng thái thanh toán</span><strong>${escapeHtml(paymentStatusText(order.payment_status))}</strong></div>
+                <div><span>Phương thức</span><strong>${escapeHtml(order.payment_method === "cod" ? "Thanh toán khi nhận hàng" : order.payment_method === "bank_transfer" ? "Chuyển khoản" : order.payment_method === "online" ? "Trực tuyến" : order.payment_method || "—")}</strong></div>
                 <div><span>Trạng thái đơn</span><strong>${escapeHtml(statusText(order.order_status))}</strong></div>
                 <div><span>Ngày đặt</span><strong>${escapeHtml(date(order.created_at))}</strong></div>
             `;
@@ -280,6 +281,23 @@
                 <div class="detail-grand-total"><span>Tổng thanh toán</span><strong>${money(order.total_amount)}</strong></div>
             `;
             $("order-detail-note").textContent = order.customer_note || "Không có ghi chú.";
+            const canConfirmCod = order.payment_method === "cod" && order.payment_status === "unpaid" && order.order_status === "completed";
+            $("confirm-cod-payment").hidden = !canConfirmCod;
+            $("confirm-cod-payment").dataset.orderPaymentConfirm = order.id;
+            $("order-payment-history").innerHTML = '<tr><td colspan="4" class="empty-row">Đang tải lịch sử...</td></tr>';
+            try {
+                const paymentHistoryData = await api("/orders/" + encodeURIComponent(orderId) + "/payment-history");
+                const paymentHistory = paymentHistoryData.history || [];
+                $("order-payment-history").innerHTML = paymentHistory.length ? paymentHistory.map(entry => `
+                    <tr>
+                        <td>${escapeHtml(entry.created_at ? new Date(entry.created_at).toLocaleString("vi-VN") : "—")}</td>
+                        <td>${escapeHtml(paymentStatusText(entry.from_status))}</td>
+                        <td><span class="pill ${paymentStatusClass(entry.to_status)}">${escapeHtml(paymentStatusText(entry.to_status))}</span></td>
+                        <td>${escapeHtml(entry.changed_by_name || "Quản trị viên")}</td>
+                    </tr>`).join("") : '<tr><td colspan="4" class="empty-row">Chưa có xác nhận thanh toán được ghi nhận.</td></tr>';
+            } catch (paymentHistoryError) {
+                $("order-payment-history").innerHTML = '<tr><td colspan="4" class="empty-row">Không tải được lịch sử thanh toán. Kiểm tra migration.</td></tr>';
+            }
             $("order-detail-history").innerHTML = '<tr><td colspan="4" class="empty-row">Đang tải lịch sử...</td></tr>';
             $("order-detail-dialog").showModal();
             try {
@@ -341,6 +359,17 @@
             const remove = event.target.closest("[data-delete-product]");
             const customer = event.target.closest("[data-customer-id]");
             const orderDetail = event.target.closest("[data-order-detail]");
+            const confirmCod = event.target.closest("[data-order-payment-confirm]");
+            if (confirmCod) {
+                if (!confirm("Chỉ xác nhận nếu bạn đã nhận đủ tiền COD từ đơn vị giao hàng. Xác nhận đã thu tiền?")) return;
+                try {
+                    await api("/orders/" + confirmCod.dataset.orderPaymentConfirm + "/payment/confirm-cod", { method: "POST", body: JSON.stringify({}) });
+                    alertMessage("Đã xác nhận thu tiền COD.");
+                    await loadOrders();
+                    await loadOrderDetail(confirmCod.dataset.orderPaymentConfirm);
+                } catch (error) { alertMessage(error.message, true); }
+                return;
+            }
             if (orderDetail) { await loadOrderDetail(orderDetail.dataset.orderDetail); return; }
             if (edit) openProduct(products.find(p => String(p.id) === edit.dataset.editProduct));
             if (variants) {
