@@ -11,7 +11,7 @@ const AUDIT_FIELDS = new Set([
     "name", "product_code", "category_id", "category", "category_slug",
     "price", "old_price", "status", "is_new", "is_sale",
     "sku", "size", "color_name", "color_code", "variant_id",
-    "direction", "quantity", "note", "order_status", "payment_status"
+    "direction", "quantity", "note", "order_status", "payment_status", "product_id"
 ]);
 
 function auditDescription(method, path) {
@@ -35,8 +35,10 @@ router.use((req, res, next) => {
     res.json = (payload) => {
         if (res.statusCode >= 400 || payload?.success !== true) return originalJson(payload);
         const [action, entityType, description] = auditDescription(req.method, req.path);
+        const variantMatch = req.path.match(/\/variants\/(\d+)(?:\/|$)/);
         const match = req.path.match(/\/(\d+)(?:\/|$)/);
-        const entityId = match ? Number(match[1]) : null;
+        const entityId = variantMatch ? Number(variantMatch[1]) :
+            (match ? Number(match[1]) : (entityType === "inventory" ? Number(req.body?.variant_id || req.body?.product_id) || null : null));
         const safeDetails = {};
         for (const [key, value] of Object.entries(req.body || {})) {
             if (AUDIT_FIELDS.has(key) && ["string", "number", "boolean"].includes(typeof value)) {
