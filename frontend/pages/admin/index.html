@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <title>CHERI Admin | Tổng quan</title>
+    <link rel="stylesheet" href="../../assets/css/admin.css">
+</head>
+<body>
+    <div class="admin-shell">
+        <aside class="admin-sidebar">
+            <a class="admin-brand" href="index.html">CHERI<span>.</span><small>ADMINISTRATION</small></a>
+            <nav class="admin-nav" aria-label="Quản trị">
+                <a class="active" href="#dashboard" data-view="dashboard">◫ <span>Tổng quan</span></a>
+                <a href="#products" data-view="products">▦ <span>Sản phẩm</span></a>
+                <a href="#orders" data-view="orders">▤ <span>Đơn hàng</span></a>
+                <a href="#inventory" data-view="inventory">▧ <span>Kho hàng</span></a>
+                <a href="#customers" data-view="customers">♙ <span>Khách hàng</span></a>
+                <a href="#reviews" data-view="reviews">★ <span>Đánh giá</span></a>
+                <a href="#support" data-view="support">✉ <span>Hỗ trợ khách</span></a>
+                <a href="#reports" data-view="reports">▥ <span>Báo cáo</span></a>
+                <a href="#activity-logs" data-view="activity-logs">◷ <span>Nhật ký</span></a>
+            </nav>
+            <div class="sidebar-bottom"><a href="../index.html">← Xem cửa hàng</a><button id="admin-logout" type="button">Đăng xuất</button></div>
+        </aside>
+        <main class="admin-main">
+            <header class="admin-topbar"><div><p class="eyebrow">CHERI FASHION / MANAGEMENT</p><h1 id="page-title">Tổng quan</h1></div><div class="admin-identity"><span class="admin-avatar">C</span><span id="admin-name">Quản trị viên</span></div></header>
+            <div id="admin-alert" class="admin-alert" role="status" hidden></div>
+            <section class="admin-view active" id="view-dashboard">
+                <div class="metric-grid">
+                    <article class="metric-card"><span>Doanh thu đã thu</span><strong id="metric-revenue">—</strong><small id="metric-unpaid">Giá trị đơn chưa thu: —</small></article>
+                    <article class="metric-card"><span>Tổng đơn hàng</span><strong id="metric-orders">—</strong><small id="metric-pending">— đơn chờ xử lý</small></article>
+                    <article class="metric-card"><span>Khách hàng</span><strong id="metric-customers">—</strong><small>Tài khoản khách hàng</small></article>
+                    <article class="metric-card"><span>Sản phẩm</span><strong id="metric-products">—</strong><small id="metric-low-stock">— sản phẩm sắp hết</small></article>
+                </div>
+                <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>Đơn hàng gần đây</h2></div><button class="button button-light" data-go="orders">Tất cả đơn hàng</button></div><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody id="recent-orders"><tr><td colspan="5">Đang tải dữ liệu...</td></tr></tbody></table></div></div>
+                <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">BEST SELLERS</p><h2>Sản phẩm bán chạy</h2></div></div><div id="top-products" class="top-products">Đang tải dữ liệu...</div></div>
+            </section>
+            <section class="admin-view" id="view-reports">
+                <div class="reports-toolbar admin-panel">
+                    <div><p class="eyebrow">BUSINESS ANALYTICS</p><h2>Báo cáo kinh doanh</h2><p class="category-help">Doanh thu chỉ tính đơn đã thanh toán và chưa bị hủy. Đơn chưa thanh toán được theo dõi riêng.</p></div>
+                    <form id="reports-filter" class="reports-filter">
+                        <label>Từ ngày<input type="date" id="report-from" required></label>
+                        <label>Đến ngày<input type="date" id="report-to" required></label>
+                        <button type="submit" class="button button-primary">Lọc báo cáo</button>
+                    </form>
+                </div>
+                <div class="metric-grid reports-metrics">
+                    <article class="metric-card"><span>Doanh thu đã thu</span><strong id="report-revenue">—</strong><small>Đơn đã thanh toán, không bị hủy</small></article>
+                    <article class="metric-card"><span>Đơn đã thanh toán</span><strong id="report-paid-orders">—</strong><small>Trong khoảng thời gian chọn</small></article>
+                    <article class="metric-card"><span>Giá trị chưa thu</span><strong id="report-outstanding">—</strong><small id="report-unpaid-orders">— đơn chưa thanh toán</small></article>
+                    <article class="metric-card"><span>Đơn đã hủy</span><strong id="report-cancelled">—</strong><small id="report-total-orders">— tổng đơn trong kỳ</small></article>
+                </div>
+                <div class="admin-panel">
+                    <div class="panel-heading"><div><p class="eyebrow">REVENUE TREND</p><h2>Doanh thu theo ngày</h2></div></div>
+                    <div id="report-daily-chart" class="report-daily-chart"><p class="empty-row">Chọn khoảng ngày để xem báo cáo.</p></div>
+                </div>
+                <div class="reports-two-column">
+                    <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">ORDER STATUS</p><h2>Cơ cấu trạng thái đơn</h2></div></div><div id="report-status-list" class="report-status-list"></div></div>
+                    <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">BEST SELLERS</p><h2>Sản phẩm bán chạy</h2></div></div><div id="report-top-products" class="top-products"></div></div>
+                </div>
+                <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">STOCK ALERT</p><h2>Sản phẩm sắp hết hàng</h2></div><button class="button button-light" data-go="inventory">Quản lý kho</button></div><div class="table-scroll"><table><thead><tr><th>Mã sản phẩm</th><th>Sản phẩm</th><th>Tồn hiện tại</th></tr></thead><tbody id="report-low-stock"><tr><td colspan="3" class="empty-row">Đang tải...</td></tr></tbody></table></div></div>
+            </section>
+            <section class="admin-view" id="view-activity-logs">
+                <div class="reports-toolbar admin-panel">
+                    <div><p class="eyebrow">ADMIN AUDIT TRAIL</p><h2>Nhật ký hoạt động quản trị</h2><p class="category-help">Theo dõi các thao tác quản trị được ghi nhận từ thời điểm triển khai. Không có dữ liệu lịch sử trước đó.</p></div>
+                    <form id="activity-log-filter" class="reports-filter">
+                        <label>Từ ngày<input type="date" id="activity-from"></label>
+                        <label>Đến ngày<input type="date" id="activity-to"></label>
+                        <label>Tìm kiếm<input type="search" id="activity-search" placeholder="Tên thao tác, người thực hiện, ID"></label>
+                        <label>Loại thao tác<select id="activity-action"><option value="">Tất cả thao tác</option><option value="confirm_payment">Xác nhận thanh toán</option><option value="change_order_status">Cập nhật đơn hàng</option><option value="adjust_inventory">Điều chỉnh kho</option><option value="create_category">Tạo danh mục</option><option value="update_category">Cập nhật danh mục</option><option value="change_category_status">Thay đổi trạng thái danh mục</option><option value="create_product">Tạo sản phẩm</option><option value="update_product">Cập nhật sản phẩm</option><option value="archive_product">Ngừng kinh doanh sản phẩm</option><option value="create_variant">Tạo biến thể</option><option value="update_variant">Cập nhật biến thể</option><option value="change_variant_status">Thay đổi trạng thái biến thể</option><option value="moderate_review">Kiểm duyệt đánh giá</option><option value="change_customer_status">Cập nhật khách hàng</option></select></label>
+                        <button type="submit" class="button button-primary">Lọc nhật ký</button>
+                    </form>
+                </div>
+                <div class="admin-panel">
+                    <div class="table-scroll"><table><thead><tr><th>Thời điểm</th><th>Người thực hiện</th><th>Thao tác</th><th>Đối tượng</th><th>ID</th><th>Thông tin ghi nhận</th><th>IP</th></tr></thead><tbody id="activity-logs-table"><tr><td colspan="7" class="empty-row">Chọn mục Nhật ký để tải dữ liệu.</td></tr></tbody></table></div>
+                    <div class="dialog-actions"><button type="button" class="button button-light" id="activity-prev">Trang trước</button><span id="activity-page-label">Trang 1</span><button type="button" class="button button-light" id="activity-next">Trang sau</button></div>
+                </div>
+            </section>
+            <section class="admin-view" id="view-products"><div class="toolbar"><input id="product-search" type="search" placeholder="Tìm tên hoặc mã sản phẩm"><button class="button button-primary" id="add-product">+ Thêm sản phẩm</button></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Sản phẩm</th><th>Mã</th><th>Danh mục</th><th>Giá</th><th>Tồn kho</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="products-table"><tr><td colspan="7">Chọn mục Sản phẩm để tải dữ liệu.</td></tr></tbody></table></div></div><section class="category-management admin-panel">
+                <div class="panel-heading"><div><p class="eyebrow">CATALOG STRUCTURE</p><h2>Quản lý danh mục</h2><p class="category-help">Đổi tên hoặc slug sẽ đồng bộ với sản phẩm đang thuộc danh mục đó. Không xóa danh mục.</p></div></div>
+                <form id="category-form" class="category-form">
+                    <input type="hidden" name="id">
+                    <label>Tên danh mục<input name="name" required maxlength="120" placeholder="Ví dụ: Áo nữ"></label>
+                    <label>Slug<input name="slug" required maxlength="150" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="ao-nu"></label>
+                    <div class="category-form-actions"><button type="submit" class="button button-primary" id="category-save">Thêm danh mục</button><button type="button" class="button button-light" id="category-cancel" hidden>Hủy sửa</button></div>
+                </form>
+                <div class="table-scroll"><table><thead><tr><th>Danh mục</th><th>Slug</th><th>Sản phẩm liên kết</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="categories-table"><tr><td colspan="5">Đang tải danh mục...</td></tr></tbody></table></div>
+            </section></section>
+            <section class="admin-view" id="view-orders"><div class="payment-reconciliation"><div class="payment-summary-grid" id="payment-summary"><article class="payment-summary-card"><span>Đã thu</span><strong>—</strong><small>Đang tải...</small></article><article class="payment-summary-card"><span>Chưa thu</span><strong>—</strong><small>Đang tải...</small></article><article class="payment-summary-card"><span>Đơn đã hủy</span><strong>—</strong><small>Đang tải...</small></article></div><div class="payment-breakdown" id="payment-breakdown"></div><p class="payment-reconciliation-note">Đây là số liệu đối soát chỉ đọc. Đơn đã hủy được thống kê riêng; đơn chuyển khoản chưa được xem là đã thu nếu chưa có xác nhận thanh toán.</p></div><div class="toolbar"><input id="order-search" type="search" placeholder="Tìm mã đơn, tên hoặc số điện thoại"><select id="order-status"><option value="">Tất cả trạng thái đơn</option><option value="pending">Chờ xác nhận</option><option value="confirmed">Đã xác nhận</option><option value="processing">Đang xử lý</option><option value="shipping">Đang giao</option><option value="completed">Đã hoàn thành</option><option value="cancelled">Đã hủy</option></select><select id="order-payment-method"><option value="">Mọi phương thức</option><option value="cod">COD</option><option value="bank_transfer">Chuyển khoản</option><option value="online">Trực tuyến</option></select><select id="order-payment-status"><option value="">Mọi trạng thái thanh toán</option><option value="unpaid">Chưa thanh toán</option><option value="paid">Đã thanh toán</option><option value="pending">Đang xử lý</option><option value="failed">Thất bại</option><option value="refunded">Đã hoàn tiền</option><option value="partially_refunded">Hoàn tiền một phần</option></select></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>Liên hệ</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Thanh toán</th><th>Trạng thái đơn</th><th>Cập nhật</th></tr></thead><tbody id="orders-table"><tr><td colspan="8">Chọn mục Đơn hàng để tải dữ liệu.</td></tr></tbody></table></div></div></section>
+            <section class="admin-view" id="view-inventory">
+                <div class="panel-heading"><div><p class="eyebrow">INVENTORY CONTROL</p><h2>Điều chỉnh tồn kho</h2><p class="category-help">Mọi lần nhập/xuất thủ công đều được ghi lịch sử. Sản phẩm có biến thể phải chọn đúng biến thể.</p></div></div>
+                <div class="admin-panel">
+                    <form id="inventory-adjust-form" class="category-form">
+                        <label>Sản phẩm<select id="inventory-product" required><option value="">Chọn sản phẩm</option></select></label>
+                        <label>Biến thể<select id="inventory-variant"><option value="">Tồn kho sản phẩm (không có biến thể)</option></select></label>
+                        <label>Loại điều chỉnh<select name="direction" required><option value="in">Nhập kho</option><option value="out">Xuất kho</option></select></label>
+                        <label>Số lượng<input name="quantity" type="number" min="1" step="1" required></label>
+                        <label class="wide">Lý do / ghi chú<input name="note" maxlength="500" placeholder="Ví dụ: Nhập hàng từ nhà cung cấp" required></label>
+                        <div class="category-form-actions"><button type="submit" class="button button-primary">Xác nhận điều chỉnh</button></div>
+                    </form>
+                </div>
+                <div class="toolbar"><input id="inventory-search" type="search" placeholder="Tìm sản phẩm hoặc SKU"><select id="inventory-type"><option value="">Tất cả biến động</option><option value="adjustment_in">Nhập kho thủ công</option><option value="adjustment_out">Xuất kho thủ công</option><option value="order_out">Xuất theo đơn hàng</option><option value="order_return">Hoàn kho do hủy đơn</option></select></div>
+                <div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Thời điểm</th><th>Sản phẩm / biến thể</th><th>Loại</th><th>SL</th><th>Tồn trước</th><th>Tồn sau</th><th>Tham chiếu</th><th>Người thực hiện</th><th>Ghi chú</th></tr></thead><tbody id="inventory-movements-table"><tr><td colspan="9" class="empty-row">Đang tải lịch sử...</td></tr></tbody></table></div><div class="dialog-actions"><button type="button" class="button button-light" id="inventory-prev">Trang trước</button><span id="inventory-page-label">Trang 1</span><button type="button" class="button button-light" id="inventory-next">Trang sau</button></div></div>
+            </section>
+            <section class="admin-view" id="view-reviews">
+                <div class="reports-toolbar admin-panel">
+                    <div><p class="eyebrow">CUSTOMER VOICE</p><h2>Kiểm duyệt đánh giá</h2><p class="category-help">Chỉ đánh giá từ đơn hàng đã hoàn thành và thanh toán mới được gửi. Nội dung chỉ hiển thị công khai sau khi được duyệt.</p></div>
+                    <form id="review-admin-filter" class="reports-filter">
+                        <label>Tìm kiếm<input id="review-admin-search" type="search" placeholder="Sản phẩm, khách hàng, nội dung"></label>
+                        <label>Trạng thái<select id="review-admin-status"><option value="">Tất cả</option><option value="pending">Chờ duyệt</option><option value="approved">Đã duyệt</option><option value="rejected">Đã từ chối</option></select></label>
+                        <button type="submit" class="button button-primary">Lọc đánh giá</button>
+                    </form>
+                </div>
+                <div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Ngày gửi</th><th>Sản phẩm</th><th>Khách hàng</th><th>Số sao</th><th>Nội dung</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="admin-reviews-table"><tr><td colspan="7" class="empty-row">Chọn mục Đánh giá để tải dữ liệu.</td></tr></tbody></table></div></div>
+            </section>
+            <section class="admin-view" id="view-customers"><div class="toolbar"><input id="customer-search" type="search" placeholder="Tìm tên, email hoặc số điện thoại"></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Khách hàng</th><th>Email</th><th>Số điện thoại</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="customers-table"><tr><td colspan="6">Chọn mục Khách hàng để tải dữ liệu.</td></tr></tbody></table></div></div></section>
+            <section class="admin-view" id="view-support">
+                <div class="support-layout">
+                    <div class="admin-panel support-inbox">
+                        <div class="panel-heading"><div><p class="eyebrow">CUSTOMER CARE</p><h2>Hộp thư hỗ trợ</h2></div><button class="button button-light" id="support-refresh" type="button">Làm mới</button></div>
+                        <label class="support-filter">Trạng thái
+                            <select id="support-status-filter"><option value="">Tất cả cuộc trò chuyện</option><option value="waiting_admin">Chờ nhân viên</option><option value="admin_active">Đang hỗ trợ</option><option value="ai_active">AI đang tư vấn</option><option value="closed">Đã kết thúc</option></select>
+                        </label>
+                        <div id="support-conversation-list" class="support-conversation-list"><p class="empty-row">Đang tải...</p></div>
+                    </div>
+                    <div class="admin-panel support-chat">
+                        <div class="panel-heading"><div><p class="eyebrow">CONVERSATION</p><h2 id="support-chat-title">Chọn cuộc trò chuyện</h2><p id="support-chat-meta" class="category-help">Nội dung trao đổi với khách hàng sẽ hiển thị tại đây.</p></div></div>
+                        <div id="support-chat-messages" class="support-chat-messages"><p class="empty-row">Chưa chọn cuộc trò chuyện.</p></div>
+                        <div class="support-chat-toolbar">
+                            <button class="button button-light" id="support-claim" type="button" disabled>Nhận hỗ trợ</button>
+                            <button class="button button-light" id="support-return-ai" type="button" disabled>Chuyển về AI</button>
+                            <button class="button button-light" id="support-close" type="button" disabled>Kết thúc</button>
+                        </div>
+                        <form id="support-reply-form" class="support-reply-form">
+                            <textarea id="support-reply" rows="2" maxlength="2000" placeholder="Nhập phản hồi cho khách hàng..." required disabled></textarea>
+                            <button class="button button-primary" type="submit" disabled id="support-send">Gửi phản hồi</button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <dialog id="customer-detail-dialog" class="product-dialog customer-detail-dialog">
+        <div class="customer-detail-content">
+            <div class="dialog-heading"><div><p class="eyebrow">CUSTOMER PROFILE</p><h2 id="customer-detail-title">Hồ sơ khách hàng</h2></div><button type="button" class="icon-close" id="close-customer-detail" aria-label="Đóng">×</button></div>
+            <div id="customer-detail-summary" class="customer-detail-summary"></div>
+            <div class="customer-orders-heading"><h3>Lịch sử đơn hàng</h3><span>50 đơn gần nhất</span></div>
+            <div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Ngày tạo</th><th>Tổng tiền</th><th>Thanh toán</th><th>Trạng thái đơn</th><th></th></tr></thead><tbody id="customer-orders-table"><tr><td colspan="6">Đang tải...</td></tr></tbody></table></div>
+        </div>
+    </dialog>
+    <dialog id="product-dialog" class="product-dialog"><form id="product-form"><div class="dialog-heading"><div><p class="eyebrow">PRODUCT MANAGEMENT</p><h2 id="product-dialog-title">Thêm sản phẩm</h2></div><button type="button" class="icon-close" id="close-product-dialog" aria-label="Đóng">×</button></div><input type="hidden" name="id"><div class="form-grid"><label>Mã sản phẩm<input name="product_code" required maxlength="50"></label><label>Tên sản phẩm<input name="name" required maxlength="220"></label><label>Danh mục<select id="product-category" name="category_id" required><option value="">Chọn danh mục</option></select></label><label>Giá bán<input name="price" type="number" min="0" step="1000" required></label><label>Giá gốc<input name="old_price" type="number" min="0" step="1000" value="0"></label><label>Tồn kho<input name="stock" type="number" min="0" step="1" value="0" required></label><label>Trạng thái<select name="status"><option value="active">Đang bán</option><option value="inactive">Ngừng bán</option></select></label><label class="wide">Ảnh sản phẩm (đường dẫn)<input name="image" placeholder="/frontend/assets/images/products/..."></label><label class="wide">Mô tả<textarea name="description" rows="3"></textarea></label><label class="check"><input name="is_new" type="checkbox"> Hàng mới</label><label class="check"><input name="is_sale" type="checkbox"> Đang khuyến mãi</label></div><div class="dialog-actions"><button type="button" class="button button-light" id="cancel-product">Hủy</button><button type="submit" class="button button-primary">Lưu sản phẩm</button></div></form></dialog>
+
+    <dialog id="variant-dialog" class="product-dialog variant-dialog">
+        <div class="variant-dialog-content">
+            <div class="dialog-heading">
+                <div><p class="eyebrow">PRODUCT VARIANTS</p><h2 id="variant-dialog-title">Quản lý biến thể</h2><p id="variant-product-summary" class="variant-summary"></p></div>
+                <button type="button" class="icon-close" id="close-variant-dialog" aria-label="Đóng">×</button>
+            </div>
+            <div class="variant-list-heading"><strong>Danh sách biến thể</strong><span id="variant-count" class="pill">0 biến thể</span></div>
+            <div class="table-scroll variant-table-wrap"><table><thead><tr><th>SKU</th><th>Size</th><th>Màu</th><th>Giá riêng</th><th>Tồn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="variants-table"><tr><td colspan="7" class="empty-row">Đang tải...</td></tr></tbody></table></div>
+            <form id="variant-form" class="variant-form">
+                <input type="hidden" name="product_id"><input type="hidden" name="variant_id">
+                <div class="variant-form-heading"><strong>Thông tin biến thể</strong><button type="button" class="button button-light" id="add-variant">Làm mới biểu mẫu</button></div>
+                <div class="form-grid">
+                    <label>SKU<input name="sku" required maxlength="80" placeholder="Nhập SKU thực tế"></label>
+                    <label>Kích thước<input name="size" required maxlength="40" placeholder="Nhập size thực tế (ví dụ: S, M, L)"></label>
+                    <label>Tên màu<input name="color_name" required maxlength="80" placeholder="Nhập tên màu thực tế"></label>
+                    <label>Mã màu<input name="color_code" maxlength="20" placeholder="#FFFFFF"></label>
+                    <label>Giá riêng (để trống dùng giá sản phẩm)<input name="price" type="number" min="0" step="1000"></label>
+                    <label>Tồn kho<input name="stock" type="number" min="0" step="1" value="0" required></label>
+                    <label>Trạng thái<select name="status"><option value="active">Đang hoạt động</option><option value="inactive">Ngừng hoạt động</option></select></label>
+                </div>
+                <div class="dialog-actions"><button type="button" class="button button-light" id="cancel-variant-dialog">Đóng</button><button type="submit" class="button button-primary"><span id="variant-save-label">Thêm biến thể</span></button></div>
+            </form>
+        </div>
+    </dialog>
+    <dialog id="order-detail-dialog" class="product-dialog order-detail-dialog">
+        <div class="order-detail-content">
+            <div class="dialog-heading">
+                <div><p class="eyebrow">ORDER INFORMATION</p><h2 id="order-detail-title">Chi tiết đơn hàng</h2></div>
+                <button type="button" class="icon-close" id="close-order-detail" aria-label="Đóng">×</button>
+            </div>
+            <div id="order-detail-meta" class="order-detail-meta"></div>
+            <h3 class="order-detail-section-title">Sản phẩm trong đơn</h3>
+            <div class="table-scroll order-detail-table-wrap">
+                <table><thead><tr><th>Sản phẩm / SKU</th><th>Size</th><th>Màu</th><th>Đơn giá</th><th>SL</th><th>Thành tiền</th></tr></thead><tbody id="order-detail-items"><tr><td colspan="6" class="empty-row">Đang tải...</td></tr></tbody></table>
+            </div>
+            <div id="order-detail-totals" class="order-detail-totals"></div>
+            <div class="order-detail-note"><strong>Ghi chú khách hàng</strong><p id="order-detail-note">—</p></div>
+            <section class="order-payment-action">
+                <div><strong>Xác nhận thanh toán COD</strong><p>Chỉ sử dụng sau khi đơn vị giao hàng xác nhận đã thu đủ tiền.</p></div>
+                <button type="button" class="button button-primary" id="confirm-cod-payment" hidden>Đã nhận tiền COD</button>
+            </section>
+            <h3 class="order-detail-section-title">Lịch sử thanh toán</h3>
+            <div class="table-scroll order-detail-table-wrap">
+                <table><thead><tr><th>Thời điểm</th><th>Trước đó</th><th>Sau đó</th><th>Người xác nhận</th></tr></thead><tbody id="order-payment-history"><tr><td colspan="4" class="empty-row">Chưa có xác nhận thanh toán.</td></tr></tbody></table>
+            </div>
+            <h3 class="order-detail-section-title">Lịch sử trạng thái</h3>
+            <div class="table-scroll order-detail-table-wrap">
+                <table><thead><tr><th>Thời điểm</th><th>Trạng thái trước</th><th>Trạng thái sau</th><th>Người cập nhật</th></tr></thead><tbody id="order-detail-history"><tr><td colspan="4" class="empty-row">Chưa có lịch sử.</td></tr></tbody></table>
+            </div>
+            <div class="dialog-actions"><button type="button" class="button button-primary" id="close-order-detail-footer">Đóng</button></div>
+        </div>
+    </dialog>
+    <script src="../../assets/js/auth.js"></script><script src="../../assets/js/admin.js"></script>
+</body>
+</html>

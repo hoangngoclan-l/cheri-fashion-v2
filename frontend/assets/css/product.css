@@ -562,3 +562,30 @@
         gap: 22px 12px;
     }
 }
+
+
+/* Đánh giá sản phẩm */
+.product-reviews-section { margin-top: 70px; padding-top: 35px; border-top: 1px solid #eee4e7; }
+.review-summary { color: #8b6674; font-size: 13px; white-space: nowrap; }
+.review-summary strong { color: #382b30; font-size: 24px; margin-right: 7px; }
+.review-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .8fr); gap: 28px; align-items: start; }
+.review-list { display: grid; gap: 14px; }
+.review-card { padding: 18px 0; border-bottom: 1px solid #eee4e7; }
+.review-card-head { display:flex; justify-content:space-between; gap:12px; align-items:center; }
+.review-card-name { color:#49383e; font-size:13px; font-weight:700; }
+.review-card-date { color:#9a8990; font-size:11px; }
+.review-card-stars, .review-stars-input { color:#c18a43; letter-spacing:2px; }
+.review-card-content { margin:10px 0 0; color:#796d72; font-size:13px; line-height:1.8; white-space:pre-line; overflow-wrap:anywhere; }
+.review-empty { padding:24px; background:#fbf7f8; color:#897880; font-size:13px; line-height:1.8; }
+.review-form, .review-login-prompt { padding:22px; background:#fbf7f8; border:1px solid #f0e5e8; }
+.review-form h3 { margin:0 0 8px; color:#49383e; font:400 21px Georgia,serif; }
+.review-form-note, .review-login-prompt p { color:#897880; font-size:12px; line-height:1.7; }
+.review-form label { display:block; margin:14px 0 7px; color:#5e4c53; font-size:12px; font-weight:600; }
+.review-form select, .review-form textarea { width:100%; padding:11px 12px; border:1px solid #e7dce0; background:#fff; color:#49383e; font:inherit; font-size:12px; }
+.review-stars-input { display:flex; gap:5px; }
+.review-stars-input button { border:0; padding:3px 5px; background:transparent; color:#d9cbd0; cursor:pointer; font-size:25px; }
+.review-stars-input button.is-selected { color:#c18a43; }
+.review-form .button { margin-top:15px; }
+.review-form-message { color:#8b6674; font-size:12px; line-height:1.6; }
+.review-login-prompt a { color:#8b5365; font-size:13px; font-weight:700; }
+@media (max-width:700px) { .review-layout { grid-template-columns:1fr; } .review-card-head { align-items:flex-start; flex-direction:column; } .product-reviews-section { margin-top:45px; } .review-summary { white-space:normal; } }

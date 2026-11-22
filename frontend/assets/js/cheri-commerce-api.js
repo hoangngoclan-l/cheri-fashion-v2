@@ -50,6 +50,7 @@ window.CheriCommerceAPI = {
             method: "POST",
             body: JSON.stringify({
                 productId: Number(item.id),
+                variantId: item.variantId == null ? null : Number(item.variantId),
                 size: item.size || "",
                 color: item.color || "",
                 quantity: Number(item.quantity) || 1

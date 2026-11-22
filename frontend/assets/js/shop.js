@@ -127,6 +127,10 @@ function bindShopEvents() {
     document.getElementById("shop-variant-form")
         ?.addEventListener("submit", confirmShopVariant);
 
+    ["shop-modal-size", "shop-modal-color"].forEach(id => {
+        document.getElementById(id)?.addEventListener("change", updateShopSelectedVariant);
+    });
+
     document.querySelectorAll("[data-close-variant]")
         .forEach(element => {
             element.addEventListener("click", closeShopVariantModal);
@@ -262,6 +266,7 @@ async function loadShopWishlist() {
         } catch (error) {
             console.warn("Không thể tải danh sách yêu thích:", error);
             showShopToast("Chưa thể tải danh sách yêu thích từ tài khoản.");
+            return;
         }
     }
 
@@ -278,6 +283,14 @@ async function loadShopWishlist() {
 
 function normalizeShopProduct(product, index = 0) {
     const price = Number(product.price ?? product.salePrice ?? 0);
+    const variants = Array.isArray(product.variants)
+        ? product.variants.map(variant => ({
+            id: Number(variant.id), size: String(variant.size || "").trim(),
+            colorName: String(variant.color_name || "").trim(),
+            price: variant.price == null ? null : Number(variant.price),
+            stock: Math.max(0, Number(variant.stock) || 0), status: String(variant.status || "")
+        })).filter(variant => Number.isSafeInteger(variant.id) && variant.id > 0 && variant.status === "active")
+        : [];
 
     function normalizeOptions(raw, fallback) {
         let items = [];
@@ -321,20 +334,20 @@ function normalizeShopProduct(product, index = 0) {
         product.sizeOptions ??
         product.size_options;
 
-    const colors = normalizeOptions(
-        rawColors ?? (product.color ? [product.color] : []),
-        ["Màu mặc định"]
-    );
+    const colors = variants.length
+        ? [...new Set(variants.map(variant => variant.colorName).filter(Boolean))]
+        : normalizeOptions(rawColors ?? (product.color ? [product.color] : []), []);
 
-    const sizes = normalizeOptions(
-        rawSizes ?? (product.size ? [product.size] : []),
-        ["S", "M", "L", "XL"]
-    );
+    const sizes = variants.length
+        ? [...new Set(variants.map(variant => variant.size).filter(Boolean))]
+        : normalizeOptions(rawSizes ?? (product.size ? [product.size] : []), []);
 
-    const stock = Number(product.stock ?? product.quantity ?? 0);
+    const rawStock = Number(product.stock ?? product.quantity ?? 0);
+    const stock = variants.length ? variants.reduce((sum, variant) => sum + variant.stock, 0) : rawStock;
 
     return {
         ...product,
+        variants,
         id: String(product.id ?? product.product_id ?? `product-${index}`),
         name: String(product.name ?? product.title ?? "Sản phẩm CHERI"),
         category: String(product.category ?? product.category_name ?? ""),
@@ -823,9 +836,7 @@ function openShopVariantModal(product, action) {
         new Option("Chọn kích thước", "")
     );
 
-    const sizes = Array.isArray(product.sizes) && product.sizes.length
-        ? product.sizes
-        : ["S", "M", "L", "XL", "Free size"];
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
 
     sizes.forEach(size => {
         const value = String(size).trim();
@@ -840,9 +851,7 @@ function openShopVariantModal(product, action) {
         new Option("Chọn màu sắc", "")
     );
 
-    const colors = Array.isArray(product.colors) && product.colors.length
-        ? product.colors
-        : ["Trắng", "Đen"];
+    const colors = Array.isArray(product.colors) ? product.colors : [];
 
     colors.forEach(color => {
         const value = String(color).trim();
@@ -855,9 +864,13 @@ function openShopVariantModal(product, action) {
     quantityInput.value = "1";
     quantityInput.min = "1";
     quantityInput.max = String(Math.max(1, Math.min(99, product.stock)));
-
-    error.hidden = true;
-    error.textContent = "";
+    sizeSelect.disabled = product.variants.length === 0;
+    colorSelect.disabled = product.variants.length === 0;
+    confirmButton.disabled = true;
+    if (!product.variants.length) {
+        error.textContent = "Sản phẩm chưa có biến thể được cấu hình. Vui lòng quay lại sau.";
+        error.hidden = false;
+    }
 
     confirmButton.textContent =
         action === "buy" ? "MUA NGAY" : "THÊM VÀO GIỎ";
@@ -872,6 +885,26 @@ function openShopVariantModal(product, action) {
 /* =========================================================
    16. ĐÓNG CỬA SỔ CHỌN BIẾN THỂ
    ========================================================= */
+
+function updateShopSelectedVariant() {
+    if (!shopSelectedProduct) return;
+    const size = document.getElementById("shop-modal-size")?.value || "";
+    const color = document.getElementById("shop-modal-color")?.value || "";
+    const variant = shopSelectedProduct.variants.find(item =>
+        item.size === size && item.colorName === color
+    );
+    const price = document.getElementById("shop-modal-price");
+    const quantity = document.getElementById("shop-modal-quantity");
+    const confirm = document.getElementById("shop-variant-confirm");
+    if (variant) {
+        if (price) price.textContent = formatShopPrice(variant.price ?? shopSelectedProduct.price);
+        if (quantity) {
+            quantity.max = String(Math.max(1, Math.min(99, variant.stock)));
+            quantity.value = String(Math.min(Number(quantity.value) || 1, Math.max(1, variant.stock)));
+        }
+    }
+    if (confirm) confirm.disabled = !variant || variant.stock < 1;
+}
 
 function closeShopVariantModal() {
     const modal = document.getElementById("shop-variant-modal");
@@ -931,13 +964,23 @@ async function confirmShopVariant(event) {
         return;
     }
 
+    const selectedVariant = product.variants.find(variant =>
+        variant.size === size && variant.colorName === color
+    );
+
+    if (!selectedVariant || selectedVariant.stock < 1) {
+        error.textContent = "Biến thể đã chọn không tồn tại hoặc đã hết hàng.";
+        error.hidden = false;
+        return;
+    }
+
     if (
         !Number.isInteger(quantity) ||
         quantity < 1 ||
-        quantity > product.stock
+        quantity > selectedVariant.stock
     ) {
         error.textContent =
-            `Số lượng phải từ 1 đến ${product.stock}.`;
+            `Số lượng phải từ 1 đến ${selectedVariant.stock}.`;
 
         error.hidden = false;
         return;
@@ -947,16 +990,18 @@ async function confirmShopVariant(event) {
         id: product.id,
         name: product.name,
         category: product.category,
-        price: product.price,
+        price: selectedVariant.price ?? product.price,
         image: product.image,
+        variantId: selectedVariant.id,
         size,
         color,
-        quantity
+        quantity,
+        stock: selectedVariant.stock
     };
 
     // Giữ nguyên luồng mua ngay.
     if (shopSelectedAction === "buy") {
-        if (!writeShopStorage("cheri_buy_now", selectedItem)) {
+        if (!writeShopStorage(cheriStorageKey("cheri_buy_now"), selectedItem)) {
             error.textContent = "Không thể lưu sản phẩm để mua ngay.";
             error.hidden = false;
             return;
@@ -998,6 +1043,7 @@ async function confirmShopVariant(event) {
 
     const existing = cart.find(item =>
         String(item.id) === String(selectedItem.id) &&
+        Number(item.variantId ?? 0) === Number(selectedItem.variantId ?? 0) &&
         item.size === selectedItem.size &&
         item.color === selectedItem.color
     );
@@ -1006,9 +1052,9 @@ async function confirmShopVariant(event) {
         const existingQuantity =
             Number(existing.quantity ?? existing.qty) || 0;
 
-        if (existingQuantity + quantity > product.stock) {
+        if (existingQuantity + quantity > selectedItem.stock) {
             error.textContent =
-                `Bạn chỉ có thể chọn tối đa ${product.stock} sản phẩm.`;
+                `Bạn chỉ có thể chọn tối đa ${selectedItem.stock} sản phẩm.`;
 
             error.hidden = false;
             return;

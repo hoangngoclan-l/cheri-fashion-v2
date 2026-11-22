@@ -54,6 +54,7 @@ function cartMapServerItems(serverItems) {
             cartItemId,
             id: Number(item.product_id),
             productId: Number(item.product_id),
+            variantId: item.variant_id == null ? null : Number(item.variant_id),
             name: item.name || "Sản phẩm Cheri",
             price: Number(item.price) || 0,
             image: item.image || "",

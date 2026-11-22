@@ -17,6 +17,7 @@
     <script src="../assets/js/app.js" defer></script>
     <script src="../assets/js/cheri-commerce-api.js" defer></script>
     <script src="../assets/js/product.js" defer></script>
+    <script src="../assets/js/product-reviews.js" defer></script>
 </head>
 
 <body>
@@ -41,6 +42,31 @@
             <h2>Thông tin sản phẩm</h2>
             <div id="product-description" class="product-description">
                 Thông tin chi tiết sẽ được cập nhật.
+            </div>
+        </section>
+
+        <section class="product-reviews-section" id="product-reviews">
+            <div class="product-section-heading">
+                <div><span class="product-eyebrow">CUSTOMER REVIEWS</span><h2>Đánh giá từ khách hàng</h2></div>
+                <div id="review-summary" class="review-summary" aria-live="polite">Đang tải đánh giá...</div>
+            </div>
+            <div class="review-layout">
+                <div class="review-list" id="product-review-list"><p class="product-loading">Đang tải đánh giá...</p></div>
+                <form id="product-review-form" class="review-form" hidden>
+                    <h3>Chia sẻ trải nghiệm của bạn</h3>
+                    <p class="review-form-note">Chỉ tài khoản có đơn hàng đã hoàn thành và thanh toán mới được đánh giá sản phẩm.</p>
+                    <label for="review-purchase">Đơn hàng / sản phẩm đã mua</label>
+                    <select id="review-purchase" required><option value="">Chọn sản phẩm trong đơn đủ điều kiện</option></select>
+                    <label>Chấm điểm</label>
+                    <div class="review-stars-input" role="group" aria-label="Chọn số sao">
+                        <button type="button" data-review-rating="1" aria-label="1 sao" aria-pressed="false">★</button><button type="button" data-review-rating="2" aria-label="2 sao" aria-pressed="false">★</button><button type="button" data-review-rating="3" aria-label="3 sao" aria-pressed="false">★</button><button type="button" data-review-rating="4" aria-label="4 sao" aria-pressed="false">★</button><button type="button" data-review-rating="5" aria-label="5 sao" aria-pressed="false">★</button>
+                    </div>
+                    <label for="review-content">Nội dung đánh giá</label>
+                    <textarea id="review-content" rows="5" minlength="10" maxlength="2000" placeholder="Chia sẻ cảm nhận thực tế của bạn (10–2.000 ký tự)." required></textarea>
+                    <button type="submit" class="button button-primary" id="review-submit">Gửi đánh giá</button>
+                    <p id="review-form-message" class="review-form-message" role="status"></p>
+                </form>
+                <div id="review-login-prompt" class="review-login-prompt" hidden><p>Đăng nhập để xem các sản phẩm bạn đủ điều kiện đánh giá.</p><a href="account.html">Đăng nhập tài khoản</a></div>
             </div>
         </section>
 

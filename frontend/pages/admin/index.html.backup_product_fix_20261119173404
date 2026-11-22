@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex,nofollow">
+    <title>CHERI Admin | Tổng quan</title>
+    <link rel="stylesheet" href="../../assets/css/admin.css">
+</head>
+<body>
+    <div class="admin-shell">
+        <aside class="admin-sidebar">
+            <a class="admin-brand" href="index.html">CHERI<span>.</span><small>ADMINISTRATION</small></a>
+            <nav class="admin-nav" aria-label="Quản trị">
+                <a class="active" href="#dashboard" data-view="dashboard">◫ <span>Tổng quan</span></a>
+                <a href="#products" data-view="products">▦ <span>Sản phẩm</span></a>
+                <a href="#orders" data-view="orders">▤ <span>Đơn hàng</span></a>
+                <a href="#customers" data-view="customers">♙ <span>Khách hàng</span></a>
+            </nav>
+            <div class="sidebar-bottom"><a href="../index.html">← Xem cửa hàng</a><button id="admin-logout" type="button">Đăng xuất</button></div>
+        </aside>
+        <main class="admin-main">
+            <header class="admin-topbar"><div><p class="eyebrow">CHERI FASHION / MANAGEMENT</p><h1 id="page-title">Tổng quan</h1></div><div class="admin-identity"><span class="admin-avatar">C</span><span id="admin-name">Quản trị viên</span></div></header>
+            <div id="admin-alert" class="admin-alert" role="status" hidden></div>
+            <section class="admin-view active" id="view-dashboard">
+                <div class="metric-grid">
+                    <article class="metric-card"><span>Doanh thu ghi nhận</span><strong id="metric-revenue">—</strong><small>Không tính đơn đã hủy hoặc hoàn trả</small></article>
+                    <article class="metric-card"><span>Tổng đơn hàng</span><strong id="metric-orders">—</strong><small id="metric-pending">— đơn chờ xử lý</small></article>
+                    <article class="metric-card"><span>Khách hàng</span><strong id="metric-customers">—</strong><small>Tài khoản khách hàng</small></article>
+                    <article class="metric-card"><span>Sản phẩm</span><strong id="metric-products">—</strong><small id="metric-low-stock">— sản phẩm sắp hết</small></article>
+                </div>
+                <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">RECENT ACTIVITY</p><h2>Đơn hàng gần đây</h2></div><button class="button button-light" data-go="orders">Tất cả đơn hàng</button></div><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Khách hàng</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Trạng thái</th></tr></thead><tbody id="recent-orders"><tr><td colspan="5">Đang tải dữ liệu...</td></tr></tbody></table></div></div>
+                <div class="admin-panel"><div class="panel-heading"><div><p class="eyebrow">BEST SELLERS</p><h2>Sản phẩm bán chạy</h2></div></div><div id="top-products" class="top-products">Đang tải dữ liệu...</div></div>
+            </section>
+            <section class="admin-view" id="view-products"><div class="toolbar"><input id="product-search" type="search" placeholder="Tìm tên hoặc mã sản phẩm"><button class="button button-primary" id="add-product">+ Thêm sản phẩm</button></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Sản phẩm</th><th>Mã</th><th>Danh mục</th><th>Giá</th><th>Tồn kho</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="products-table"><tr><td colspan="7">Chọn mục Sản phẩm để tải dữ liệu.</td></tr></tbody></table></div></div></section>
+            <section class="admin-view" id="view-orders"><div class="toolbar"><input id="order-search" type="search" placeholder="Tìm mã đơn, tên hoặc số điện thoại"><select id="order-status"><option value="">Tất cả trạng thái</option><option value="pending">Chờ xác nhận</option><option value="confirmed">Đã xác nhận</option><option value="processing">Đang xử lý</option><option value="shipping">Đang giao</option><option value="delivered">Đã giao</option><option value="cancelled">Đã hủy</option><option value="returned">Hoàn trả</option></select></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Mã đơn</th><th>Người nhận</th><th>Liên hệ</th><th>Ngày đặt</th><th>Tổng tiền</th><th>Trạng thái</th><th>Cập nhật</th></tr></thead><tbody id="orders-table"><tr><td colspan="7">Chọn mục Đơn hàng để tải dữ liệu.</td></tr></tbody></table></div></div></section>
+            <section class="admin-view" id="view-customers"><div class="toolbar"><input id="customer-search" type="search" placeholder="Tìm tên, email hoặc số điện thoại"></div><div class="admin-panel"><div class="table-scroll"><table><thead><tr><th>Khách hàng</th><th>Email</th><th>Số điện thoại</th><th>Ngày tham gia</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody id="customers-table"><tr><td colspan="6">Chọn mục Khách hàng để tải dữ liệu.</td></tr></tbody></table></div></div></section>
+        </main>
+    </div>
+    <dialog id="product-dialog" class="product-dialog"><form id="product-form"><div class="dialog-heading"><div><p class="eyebrow">PRODUCT MANAGEMENT</p><h2 id="product-dialog-title">Thêm sản phẩm</h2></div><button type="button" class="icon-close" id="close-product-dialog" aria-label="Đóng">×</button></div><input type="hidden" name="id"><div class="form-grid"><label>Mã sản phẩm<input name="product_code" required maxlength="60"></label><label>Tên sản phẩm<input name="name" required maxlength="220"></label><label>Danh mục<input name="category" required></label><label>Slug danh mục<input name="category_slug" required></label><label>Giá bán<input name="price" type="number" min="0" step="1000" required></label><label>Giá gốc<input name="old_price" type="number" min="0" step="1000" value="0"></label><label>Tồn kho<input name="stock" type="number" min="0" step="1" value="0" required></label><label>Trạng thái<select name="status"><option value="active">Đang bán</option><option value="inactive">Ngừng bán</option><option value="out_of_stock">Hết hàng</option></select></label><label class="wide">Ảnh sản phẩm (đường dẫn)<input name="image" placeholder="/frontend/assets/images/products/..."></label><label class="wide">Mô tả<textarea name="description" rows="3"></textarea></label><label class="check"><input name="is_new" type="checkbox"> Hàng mới</label><label class="check"><input name="is_sale" type="checkbox"> Đang khuyến mãi</label></div><div class="dialog-actions"><button type="button" class="button button-light" id="cancel-product">Hủy</button><button type="submit" class="button button-primary">Lưu sản phẩm</button></div></form></dialog>
+    <script src="../../assets/js/auth.js"></script><script src="../../assets/js/admin.js"></script>
+</body>
+</html>
