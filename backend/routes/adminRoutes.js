@@ -11,7 +11,7 @@ const AUDIT_FIELDS = new Set([
     "name", "product_code", "category_id", "category", "category_slug",
     "price", "old_price", "status", "is_new", "is_sale",
     "sku", "size", "color_name", "color_code", "variant_id",
-    "direction", "quantity", "note", "order_status", "payment_status", "product_id"
+    "direction", "quantity", "order_status", "payment_status", "product_id"
 ]);
 
 function auditDescription(method, path) {
@@ -37,8 +37,8 @@ router.use((req, res, next) => {
         const [action, entityType, description] = auditDescription(req.method, req.path);
         const variantMatch = req.path.match(/\/variants\/(\d+)(?:\/|$)/);
         const match = req.path.match(/\/(\d+)(?:\/|$)/);
-        const entityId = variantMatch ? Number(variantMatch[1]) :
-            (match ? Number(match[1]) : (entityType === "inventory" ? Number(req.body?.variant_id || req.body?.product_id) || null : null));
+        const entityId = Number(payload.variantId) || (variantMatch ? Number(variantMatch[1]) :
+            (match ? Number(match[1]) : (entityType === "inventory" ? Number(req.body?.variant_id || req.body?.product_id) || null : null)));
         const safeDetails = {};
         for (const [key, value] of Object.entries(req.body || {})) {
             if (AUDIT_FIELDS.has(key) && ["string", "number", "boolean"].includes(typeof value)) {
@@ -49,13 +49,15 @@ router.use((req, res, next) => {
         const actorId = req.user?.id || null;
         const ip = String(req.ip || "").slice(0, 45) || null;
         const agent = String(req.get("user-agent") || "").slice(0, 255) || null;
-        pool.execute(
+        return pool.execute(
             `INSERT INTO admin_activity_logs
                 (actor_user_id, action, entity_type, entity_id, description, details, ip_address, user_agent)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [actorId, action, entityType, entityId, description, details, ip, agent]
-        ).catch(error => console.error("Không thể ghi nhật ký quản trị:", error));
-        return originalJson(payload);
+        ).then(() => originalJson(payload)).catch(error => {
+            console.error("Không thể ghi nhật ký quản trị:", error);
+            return originalJson(payload);
+        });
     };
     return next();
 });
@@ -94,6 +96,14 @@ router.get("/activity-logs", async (req, res) => {
     const from = String(req.query.from || "").trim();
     const to = String(req.query.to || "").trim();
     const clauses = [], params = [];
+    const validDate = value => {
+        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+        const parsed = new Date(value + "T00:00:00.000Z");
+        return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    };
+    if ((from && !validDate(from)) || (to && !validDate(to)) || (from && to && from > to)) {
+        return res.status(400).json({ success: false, message: "Khoảng ngày lọc nhật ký không hợp lệ." });
+    }
     if (q) {
         clauses.push("(l.description LIKE ? OR l.entity_type LIKE ? OR CAST(l.entity_id AS CHAR) LIKE ? OR u.full_name LIKE ?)");
         params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
