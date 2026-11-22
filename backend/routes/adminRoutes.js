@@ -397,6 +397,95 @@ router.get("/orders/:id/history", async (req, res) => {
     }
 });
 
+// GET /api/admin/orders/:id/payment-history — lịch sử xác nhận thanh toán.
+router.get("/orders/:id/payment-history", async (req, res) => {
+    const id = positiveId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "Mã đơn hàng không hợp lệ." });
+    try {
+        const [[order]] = await pool.execute("SELECT id FROM orders WHERE id = ? LIMIT 1", [id]);
+        if (!order) return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        const [history] = await pool.execute(`
+            SELECT h.id, h.from_status, h.to_status, h.note, h.created_at,
+                   u.full_name AS changed_by_name
+            FROM order_payment_history h
+            LEFT JOIN users u ON u.id = h.changed_by
+            WHERE h.order_id = ?
+            ORDER BY h.created_at DESC, h.id DESC
+            LIMIT 100
+        `, [id]);
+        return res.json({ success: true, history });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải lịch sử thanh toán. Hãy kiểm tra migration lịch sử thanh toán.");
+    }
+});
+
+// POST /api/admin/orders/:id/payment/confirm-cod
+// Chỉ xác nhận thu tiền COD sau khi đơn đã hoàn tất giao hàng.
+router.post("/orders/:id/payment/confirm-cod", async (req, res) => {
+    const id = positiveId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "Mã đơn hàng không hợp lệ." });
+
+    let connection = null;
+    let transactionStarted = false;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        transactionStarted = true;
+
+        const [rows] = await connection.execute(
+            "SELECT id, payment_method, payment_status, order_status FROM orders WHERE id = ? FOR UPDATE",
+            [id]
+        );
+        if (!rows.length) {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        }
+
+        const order = rows[0];
+        if (order.payment_method !== "cod") {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(409).json({ success: false, message: "Chỉ đơn COD mới được xác nhận thu tiền theo quy trình này." });
+        }
+        if (order.payment_status !== "unpaid") {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(409).json({ success: false, message: "Đơn hàng không còn ở trạng thái chưa thanh toán." });
+        }
+        if (order.order_status !== "completed") {
+            await connection.rollback();
+            transactionStarted = false;
+            return res.status(409).json({ success: false, message: "Chỉ xác nhận thu tiền COD sau khi đơn hàng đã hoàn tất giao hàng." });
+        }
+
+        const [updated] = await connection.execute(
+            "UPDATE orders SET payment_status = 'paid' WHERE id = ? AND payment_status = 'unpaid'",
+            [id]
+        );
+        if (updated.affectedRows !== 1) throw new Error("Không cập nhật được trạng thái thanh toán.");
+
+        await connection.execute(
+            `INSERT INTO order_payment_history
+                (order_id, from_status, to_status, note, changed_by)
+             VALUES (?, 'unpaid', 'paid', ?, ?)`,
+            [id, "Admin xác nhận đã thu tiền COD sau khi giao hàng hoàn tất.", req.user.id]
+        );
+
+        await connection.commit();
+        transactionStarted = false;
+        return res.json({ success: true, message: "Đã xác nhận thu tiền COD và lưu lịch sử thanh toán." });
+    } catch (error) {
+        if (connection && transactionStarted) {
+            try { await connection.rollback(); } catch (rollbackError) { console.error("Rollback xác nhận COD thất bại:", rollbackError); }
+            transactionStarted = false;
+        }
+        return sendError(res, error, "Không thể xác nhận thu tiền COD.");
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
 // PATCH /api/admin/orders/:id/status
 router.patch("/orders/:id/status", async (req, res) => {
     const id = positiveId(req.params.id);
