@@ -97,8 +97,8 @@ router.get("/activity-logs", async (req, res) => {
         params.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
     }
     if (action) { clauses.push("l.action = ?"); params.push(action); }
-    if (from && /^\\d{4}-\\d{2}-\\d{2}$/.test(from)) { clauses.push("l.created_at >= ?"); params.push(from); }
-    if (to && /^\\d{4}-\\d{2}-\\d{2}$/.test(to)) { clauses.push("l.created_at < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(to); }
+    if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) { clauses.push("l.created_at >= ?"); params.push(from); }
+    if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) { clauses.push("l.created_at < DATE_ADD(?, INTERVAL 1 DAY)"); params.push(to); }
     const where = clauses.length ? "WHERE " + clauses.join(" AND ") : "";
     try {
         const [[count]] = await pool.execute(`
