@@ -146,6 +146,7 @@
                 adjust_inventory: "Điều chỉnh tồn kho",
                 create_category: "Tạo danh mục",
                 update_category: "Cập nhật danh mục",
+                change_category_status: "Thay đổi trạng thái danh mục",
                 create_product: "Tạo sản phẩm",
                 update_product: "Cập nhật sản phẩm",
                 archive_product: "Ngừng kinh doanh sản phẩm",
