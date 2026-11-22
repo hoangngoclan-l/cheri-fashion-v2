@@ -76,6 +76,14 @@
             </div>
             <div id="order-detail-totals" class="order-detail-totals"></div>
             <div class="order-detail-note"><strong>Ghi chú khách hàng</strong><p id="order-detail-note">—</p></div>
+            <section class="order-payment-action">
+                <div><strong>Xác nhận thanh toán COD</strong><p>Chỉ sử dụng sau khi đơn vị giao hàng xác nhận đã thu đủ tiền.</p></div>
+                <button type="button" class="button button-primary" id="confirm-cod-payment" hidden>Đã nhận tiền COD</button>
+            </section>
+            <h3 class="order-detail-section-title">Lịch sử thanh toán</h3>
+            <div class="table-scroll order-detail-table-wrap">
+                <table><thead><tr><th>Thời điểm</th><th>Trước đó</th><th>Sau đó</th><th>Người xác nhận</th></tr></thead><tbody id="order-payment-history"><tr><td colspan="4" class="empty-row">Chưa có xác nhận thanh toán.</td></tr></tbody></table>
+            </div>
             <h3 class="order-detail-section-title">Lịch sử trạng thái</h3>
             <div class="table-scroll order-detail-table-wrap">
                 <table><thead><tr><th>Thời điểm</th><th>Trạng thái trước</th><th>Trạng thái sau</th><th>Người cập nhật</th></tr></thead><tbody id="order-detail-history"><tr><td colspan="4" class="empty-row">Chưa có lịch sử.</td></tr></tbody></table>
