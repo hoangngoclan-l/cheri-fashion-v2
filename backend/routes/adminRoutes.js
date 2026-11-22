@@ -422,6 +422,85 @@ router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
         return res.json({ success: true, message: 'Đã cập nhật trạng thái biến thể.' });
     } catch (error) { return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.'); }
 });
+// Inventory audit APIs: every manual adjustment is atomic with its ledger entry.
+router.get("/inventory/movements", async (req, res) => {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, Number.parseInt(req.query.limit, 10) || 30));
+    const type = String(req.query.type || "").trim();
+    const q = String(req.query.q || "").trim().slice(0, 100);
+    const types = ["adjustment_in", "adjustment_out", "order_out", "order_return"];
+    const clauses = [], params = [];
+    if (types.includes(type)) { clauses.push("m.movement_type = ?"); params.push(type); }
+    if (q) {
+        clauses.push("(p.name LIKE ? OR p.product_code LIKE ? OR pv.sku LIKE ?)");
+        params.push(`%${q}%`, `%${q}%`, `%${q}%`);
+    }
+    const where = clauses.length ? "WHERE " + clauses.join(" AND ") : "";
+    try {
+        const [[count]] = await pool.execute(`SELECT COUNT(*) AS total FROM inventory_movements m LEFT JOIN products p ON p.id=m.product_id LEFT JOIN product_variants pv ON pv.id=m.variant_id ${where}`, params);
+        const [movements] = await pool.execute(`
+            SELECT m.id, m.product_id, m.variant_id, m.movement_type, m.quantity,
+                   m.stock_before, m.stock_after, m.reference_type, m.reference_id,
+                   m.note, m.actor_user_id, m.created_at, p.name AS product_name,
+                   p.product_code, pv.sku, pv.size, pv.color_name, u.full_name AS actor_name
+            FROM inventory_movements m
+            LEFT JOIN products p ON p.id=m.product_id
+            LEFT JOIN product_variants pv ON pv.id=m.variant_id
+            LEFT JOIN users u ON u.id=m.actor_user_id
+            ${where}
+            ORDER BY m.created_at DESC, m.id DESC LIMIT ? OFFSET ?
+        `, [...params, limit, (page - 1) * limit]);
+        return res.json({ success: true, movements, pagination: { page, limit, total: Number(count.total), totalPages: Math.ceil(Number(count.total) / limit) } });
+    } catch (error) { return sendError(res, error, "Không thể tải lịch sử kho. Hãy kiểm tra migration inventory_movements."); }
+});
+
+router.post("/inventory/adjust", async (req, res) => {
+    const body = req.body || {};
+    const productId = positiveId(body.product_id);
+    const variantId = body.variant_id == null || body.variant_id === "" ? null : positiveId(body.variant_id);
+    const quantity = Number(body.quantity);
+    const direction = String(body.direction || "");
+    const note = String(body.note || "").trim();
+    if (!productId || (body.variant_id != null && body.variant_id !== "" && !variantId) ||
+        !Number.isSafeInteger(quantity) || quantity <= 0 || !["in", "out"].includes(direction) || note.length > 500) {
+        return res.status(400).json({ success: false, message: "Thông tin điều chỉnh tồn kho không hợp lệ." });
+    }
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [products] = await connection.execute("SELECT id, stock FROM products WHERE id=? FOR UPDATE", [productId]);
+        if (!products.length) { await connection.rollback(); return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." }); }
+        let before, after;
+        if (variantId !== null) {
+            const [variants] = await connection.execute("SELECT id, stock FROM product_variants WHERE id=? AND product_id=? FOR UPDATE", [variantId, productId]);
+            if (!variants.length) { await connection.rollback(); return res.status(404).json({ success: false, message: "Không tìm thấy biến thể." }); }
+            before = Number(variants[0].stock);
+            after = direction === "in" ? before + quantity : before - quantity;
+            if (!Number.isSafeInteger(after) || after < 0) { await connection.rollback(); return res.status(409).json({ success: false, message: "Tồn kho biến thể không đủ." }); }
+            await connection.execute("UPDATE product_variants SET stock=? WHERE id=? AND product_id=?", [after, variantId, productId]);
+            await syncProductStock(productId, connection);
+        } else {
+            const [[summary]] = await connection.execute("SELECT COUNT(*) AS total FROM product_variants WHERE product_id=?", [productId]);
+            if (Number(summary.total) > 0) { await connection.rollback(); return res.status(409).json({ success: false, message: "Sản phẩm này quản lý tồn kho theo biến thể. Hãy chọn biến thể." }); }
+            before = Number(products[0].stock);
+            after = direction === "in" ? before + quantity : before - quantity;
+            if (!Number.isSafeInteger(after) || after < 0) { await connection.rollback(); return res.status(409).json({ success: false, message: "Tồn kho sản phẩm không đủ." }); }
+            await connection.execute("UPDATE products SET stock=? WHERE id=?", [after, productId]);
+        }
+        await connection.execute(`
+            INSERT INTO inventory_movements
+              (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, note, actor_user_id)
+            VALUES (?, ?, ?, ?, ?, ?, 'admin_adjustment', ?, ?)
+        `, [productId, variantId, direction === "in" ? "adjustment_in" : "adjustment_out", quantity, before, after, note || null, req.user?.id || null]);
+        await connection.commit();
+        return res.json({ success: true, message: "Đã điều chỉnh tồn kho và ghi lịch sử.", stock_before: before, stock_after: after });
+    } catch (error) {
+        if (connection) { try { await connection.rollback(); } catch (_) {} }
+        return sendError(res, error, "Không thể điều chỉnh tồn kho.");
+    } finally { if (connection) connection.release(); }
+});
+
 // GET /api/admin/payments/summary — read-only payment reconciliation overview.
 router.get("/payments/summary", async (req, res) => {
     try {
