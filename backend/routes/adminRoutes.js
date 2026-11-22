@@ -840,7 +840,7 @@ router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
         connection = await pool.getConnection();
         await connection.beginTransaction();
         const [[product]] = await connection.execute(
-            'SELECT id FROM products WHERE id = ? FOR UPDATE', [productId]
+            'SELECT id, stock FROM products WHERE id = ? FOR UPDATE', [productId]
         );
         if (!product) {
             await connection.rollback();
@@ -870,7 +870,7 @@ router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
             description: "Thay đổi trạng thái biến thể",
             details: {
                 product_id: productId,
-                before: { status: before.status, product_stock: null },
+                before: { status: before.status, product_stock: Number(product.stock) },
                 after: { status, product_stock: Number(afterProduct.stock) },
                 sku: before.sku,
                 size: before.size,
