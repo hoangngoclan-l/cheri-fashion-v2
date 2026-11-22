@@ -75,6 +75,93 @@ router.get("/dashboard", async (req, res) => {
     }
 });
 
+// GET /api/admin/reports?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get("/reports", async (req, res) => {
+    const from = String(req.query.from || "");
+    const to = String(req.query.to || "");
+    const validDate = value => {
+        if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return false;
+        const parsed = new Date(value + "T00:00:00.000Z");
+        return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+    };
+    if (!validDate(from) || !validDate(to) || from > to) {
+        return res.status(400).json({ success: false, message: "Khoảng ngày báo cáo không hợp lệ." });
+    }
+    const daySpan = (Date.parse(to + "T00:00:00Z") - Date.parse(from + "T00:00:00Z")) / 86400000;
+    if (daySpan > 365) {
+        return res.status(400).json({ success: false, message: "Khoảng báo cáo tối đa là 366 ngày." });
+    }
+
+    try {
+        const range = [from, to];
+        const [[summary]] = await pool.execute(`
+            SELECT
+                COUNT(*) AS total_orders,
+                SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_orders,
+                SUM(CASE WHEN order_status <> 'cancelled' AND payment_status = 'paid' THEN 1 ELSE 0 END) AS paid_orders,
+                SUM(CASE WHEN order_status <> 'cancelled' AND payment_status = 'unpaid' THEN 1 ELSE 0 END) AS unpaid_orders,
+                COALESCE(SUM(CASE
+                    WHEN order_status <> 'cancelled' AND payment_status = 'paid'
+                    THEN total_amount ELSE 0 END), 0) AS collected_revenue,
+                COALESCE(SUM(CASE
+                    WHEN order_status <> 'cancelled' AND payment_status = 'unpaid'
+                    THEN total_amount ELSE 0 END), 0) AS outstanding_amount
+            FROM orders
+            WHERE created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
+        `, range);
+        const [daily] = await pool.execute(`
+            SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS report_date,
+                   COUNT(*) AS total_orders,
+                   SUM(CASE WHEN order_status <> 'cancelled' AND payment_status = 'paid' THEN 1 ELSE 0 END) AS paid_orders,
+                   COALESCE(SUM(CASE
+                       WHEN order_status <> 'cancelled' AND payment_status = 'paid'
+                       THEN total_amount ELSE 0 END), 0) AS collected_revenue
+            FROM orders
+            WHERE created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
+            GROUP BY DATE(created_at)
+            ORDER BY DATE(created_at) ASC
+        `, range);
+        const [statuses] = await pool.execute(`
+            SELECT order_status, COUNT(*) AS total
+            FROM orders
+            WHERE created_at >= ? AND created_at < DATE_ADD(?, INTERVAL 1 DAY)
+            GROUP BY order_status
+            ORDER BY total DESC
+        `, range);
+        const [topProducts] = await pool.execute(`
+            SELECT oi.product_name,
+                   SUM(oi.quantity) AS units_sold,
+                   COALESCE(SUM(oi.line_total), 0) AS revenue
+            FROM order_items oi
+            INNER JOIN orders o ON o.id = oi.order_id
+            WHERE o.created_at >= ? AND o.created_at < DATE_ADD(?, INTERVAL 1 DAY)
+              AND o.order_status <> 'cancelled'
+              AND o.payment_status = 'paid'
+            GROUP BY oi.product_name
+            ORDER BY units_sold DESC, revenue DESC
+            LIMIT 10
+        `, range);
+        const [lowStock] = await pool.execute(`
+            SELECT id, product_code, name, stock
+            FROM products
+            WHERE status = 'active' AND stock <= 5
+            ORDER BY stock ASC, name ASC
+            LIMIT 10
+        `);
+        return res.json({
+            success: true,
+            range: { from, to },
+            summary: summary || {},
+            daily,
+            statuses,
+            topProducts,
+            lowStock
+        });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải báo cáo kinh doanh.");
+    }
+});
+
 // GET /api/admin/categories
 router.get("/categories", async (req, res) => {
     try {
