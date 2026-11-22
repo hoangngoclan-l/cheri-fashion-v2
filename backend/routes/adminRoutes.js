@@ -1673,17 +1673,29 @@ router.patch("/reviews/:id/status", async (req, res) => {
         connection = await pool.getConnection();
         await connection.beginTransaction();
         const [rows] = await connection.execute(
-            "SELECT id, status FROM product_reviews WHERE id = ? FOR UPDATE",
+            "SELECT id, product_id, user_id, status FROM product_reviews WHERE id = ? FOR UPDATE",
             [reviewId]
         );
         if (!rows.length) {
             await connection.rollback();
             return res.status(404).json({ success: false, message: "Không tìm thấy đánh giá." });
         }
+        const previousStatus = rows[0].status;
         await connection.execute(
             "UPDATE product_reviews SET status = ?, moderated_by = ?, moderated_at = CURRENT_TIMESTAMP WHERE id = ?",
             [status, req.user.id, reviewId]
         );
+        await writeAdminActivityLog(connection, req, {
+            action: "moderate_review",
+            entityType: "product_review",
+            entityId: reviewId,
+            description: status === "approved" ? "Duyệt đánh giá sản phẩm" : "Từ chối đánh giá sản phẩm",
+            details: {
+                product_id: Number(rows[0].product_id),
+                customer_id: String(rows[0].user_id),
+                status: { before: previousStatus, after: status }
+            }
+        });
         await connection.commit();
         return res.json({
             success: true,
