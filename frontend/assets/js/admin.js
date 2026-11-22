@@ -151,6 +151,7 @@
                 archive_product: "Ngừng kinh doanh sản phẩm",
                 create_variant: "Tạo biến thể",
                 update_variant: "Cập nhật biến thể",
+                change_variant_status: "Thay đổi trạng thái biến thể",
                 change_customer_status: "Cập nhật khách hàng",
                 admin_mutation: "Thao tác quản trị"
             };
