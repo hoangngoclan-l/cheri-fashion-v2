@@ -323,14 +323,60 @@ router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
         return res.json({ success: true, message: 'Đã cập nhật trạng thái biến thể.' });
     } catch (error) { return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.'); }
 });
+// GET /api/admin/payments/summary — read-only payment reconciliation overview.
+router.get("/payments/summary", async (req, res) => {
+    try {
+        const [[totals]] = await pool.execute(`
+            SELECT
+                COUNT(*) AS total_orders,
+                COALESCE(SUM(CASE
+                    WHEN payment_status = 'paid' AND order_status <> 'cancelled'
+                    THEN total_amount ELSE 0 END), 0) AS collected_amount,
+                COALESCE(SUM(CASE
+                    WHEN payment_status = 'unpaid' AND order_status <> 'cancelled'
+                    THEN total_amount ELSE 0 END), 0) AS outstanding_amount,
+                SUM(CASE
+                    WHEN payment_status = 'paid' AND order_status <> 'cancelled'
+                    THEN 1 ELSE 0 END) AS paid_orders,
+                SUM(CASE
+                    WHEN payment_status = 'unpaid' AND order_status <> 'cancelled'
+                    THEN 1 ELSE 0 END) AS unpaid_orders,
+                SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_orders
+            FROM orders
+        `);
+        const [breakdown] = await pool.execute(`
+            SELECT payment_method, payment_status,
+                COUNT(*) AS order_count,
+                COALESCE(SUM(CASE WHEN order_status <> 'cancelled' THEN total_amount ELSE 0 END), 0) AS active_amount,
+                SUM(CASE WHEN order_status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled_count
+            FROM orders
+            GROUP BY payment_method, payment_status
+            ORDER BY payment_method ASC, payment_status ASC
+        `);
+        return res.json({ success: true, totals, breakdown });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải tổng hợp đối soát thanh toán.");
+    }
+});
+
 // GET /api/admin/orders
 router.get("/orders", async (req, res) => {
     try {
         const status = String(req.query.status || "").trim();
+        const paymentMethod = String(req.query.payment_method || "").trim();
+        const paymentStatus = String(req.query.payment_status || "").trim();
         const q = String(req.query.q || "").trim().slice(0, 100);
         const clauses = [];
         const params = [];
         if (ORDER_STATUSES.includes(status)) { clauses.push("o.order_status = ?"); params.push(status); }
+        if (["cod", "bank_transfer", "online"].includes(paymentMethod)) {
+            clauses.push("o.payment_method = ?");
+            params.push(paymentMethod);
+        }
+        if (["unpaid", "paid", "pending", "failed", "refunded", "partially_refunded"].includes(paymentStatus)) {
+            clauses.push("o.payment_status = ?");
+            params.push(paymentStatus);
+        }
         if (q) {
             clauses.push("(o.order_code LIKE ? OR o.recipient_name LIKE ? OR o.phone LIKE ?)");
             params.push(`%${q}%`, `%${q}%`, `%${q}%`);
