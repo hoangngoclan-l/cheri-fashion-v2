@@ -19,6 +19,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const wishlistRoutes = require("./routes/wishlistRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -123,6 +124,7 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
 
 // Xử lý những API chưa được khai báo.
