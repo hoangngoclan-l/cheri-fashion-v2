@@ -550,35 +550,51 @@ router.put("/products/:id", async (req, res) => {
         !Number.isSafeInteger(stock) || stock < 0 || !PRODUCT_STATUSES.includes(status)) {
         return res.status(400).json({ success: false, message: "Dữ liệu cập nhật sản phẩm không hợp lệ." });
     }
+
+    let connection;
     try {
-        const [[categoryRow]] = await pool.execute(
-            "SELECT id, name, slug, is_active FROM categories WHERE id = ? LIMIT 1",
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        const [[before]] = await connection.execute(
+            "SELECT id, product_code, name, category, category_slug, price, old_price, stock, status, is_new, is_sale FROM products WHERE id = ? FOR UPDATE",
+            [id]
+        );
+        if (!before) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+        }
+
+        const [[categoryRow]] = await connection.execute(
+            "SELECT id, name, slug, is_active FROM categories WHERE id = ? FOR UPDATE",
             [categoryId]
         );
-
         if (!categoryRow) {
+            await connection.rollback();
             return res.status(400).json({ success: false, message: "Danh mục không tồn tại." });
         }
-        if (Number(categoryRow.is_active) !== 1) {
-            const [[currentProduct]] = await pool.execute(
-                "SELECT id FROM products WHERE id = ? AND category_slug = ? LIMIT 1",
-                [id, categoryRow.slug]
-            );
-            if (!currentProduct) {
-                return res.status(400).json({
-                    success: false,
-                    message: "Danh mục đã ngừng hoạt động. Chỉ sản phẩm đang thuộc danh mục này mới được giữ nguyên danh mục."
-                });
-            }
+        if (Number(categoryRow.is_active) !== 1 && before.category_slug !== categoryRow.slug) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                message: "Danh mục đã ngừng hoạt động. Chỉ sản phẩm đang thuộc danh mục này mới được giữ nguyên danh mục."
+            });
         }
 
-        const [[stockState]] = await pool.execute("SELECT id, product_code, name, category, category_slug, price, old_price, stock, status, is_new, is_sale FROM products WHERE id = ? LIMIT 1", [id]);
-        if (!stockState) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
-        const [[variantSummaryBefore]] = await pool.execute("SELECT COUNT(*) AS total FROM product_variants WHERE product_id = ?", [id]);
-        if (Number(variantSummaryBefore.total) === 0 && Number(stockState.stock) !== stock) {
-            return res.status(409).json({ success: false, message: "Không sửa tồn kho trực tiếp tại form sản phẩm. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử." });
+        const [[variantSummary]] = await connection.execute(
+            "SELECT COUNT(*) AS total FROM product_variants WHERE product_id = ?",
+            [id]
+        );
+        const hasVariants = Number(variantSummary.total) > 0;
+        if (!hasVariants && Number(before.stock) !== stock) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                message: "Không sửa tồn kho trực tiếp tại form sản phẩm. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử."
+            });
         }
-        const [result] = await pool.execute(`
+
+        await connection.execute(`
             UPDATE products SET product_code=?, name=?, category=?, category_slug=?, price=?, old_price=?,
                 image=?, description=?, is_new=?, is_sale=?, stock=?, status=? WHERE id=?
         `, [
@@ -587,38 +603,33 @@ router.put("/products/:id", async (req, res) => {
             String(body.description || "").trim() || null,
             body.is_new ? 1 : 0, body.is_sale ? 1 : 0, stock, status, id
         ]);
-        if (!result.affectedRows) {
-            const [existing] = await pool.execute("SELECT id FROM products WHERE id = ? LIMIT 1", [id]);
-            if (!existing.length) {
-                return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
-            }
-        }
 
-        // Với sản phẩm đã quản lý tồn kho bằng biến thể, stock tổng luôn
-        // phải được tính từ các biến thể đang hoạt động, không lấy từ form sản phẩm.
-        const [[variantSummary]] = await pool.execute(
-            "SELECT COUNT(*) AS total FROM product_variants WHERE product_id = ?",
+        if (hasVariants) await syncProductStock(id, connection);
+
+        const [[after]] = await connection.execute(
+            "SELECT id, product_code, name, category, category_slug, price, old_price, stock, status, is_new, is_sale FROM products WHERE id = ?",
             [id]
         );
-        if (Number(variantSummary.total) > 0) {
-            await syncProductStock(id);
-        }
-        const [[afterProduct]] = await pool.execute("SELECT id, product_code, name, category, category_slug, price, old_price, stock, status, is_new, is_sale FROM products WHERE id = ? LIMIT 1", [id]);
-        try {
-            await writeAdminActivityLog(pool, req, {
-                action: "update_product", entityType: "product", entityId: id,
-                description: "Cập nhật thông tin sản phẩm",
-                details: {
-                    before: stockState,
-                    after: afterProduct,
-                    stock_managed_by_variants: Number(variantSummary.total) > 0
-                }
-            });
-        } catch (auditError) { console.error("Không thể ghi snapshot sản phẩm:", auditError); }
+        await writeAdminActivityLog(connection, req, {
+            action: "update_product",
+            entityType: "product",
+            entityId: id,
+            description: "Cập nhật thông tin sản phẩm",
+            details: { before, after, stock_managed_by_variants: hasVariants }
+        });
+
+        await connection.commit();
         return res.json({ success: true, message: "Đã cập nhật sản phẩm." });
     } catch (error) {
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback cập nhật sản phẩm thất bại:", rollbackError);
+            }
+        }
         if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ success: false, message: "Mã sản phẩm đã được sử dụng." });
         return sendError(res, error, "Không thể cập nhật sản phẩm.");
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -749,33 +760,69 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
     const price = body.price === '' || body.price === null || body.price === undefined ? null : Number(body.price);
     const stock = Number(body.stock);
     const status = String(body.status || 'active');
-    if (!productId || !variantId || !sku || !size || !colorName || sku.length > 80 || size.length > 40 || colorName.length > 80 || (colorCode && colorCode.length > 20) || (price !== null && (!Number.isFinite(price) || price < 0)) || !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
+    if (!productId || !variantId || !sku || !size || !colorName ||
+        sku.length > 80 || size.length > 40 || colorName.length > 80 ||
+        (colorCode && colorCode.length > 20) ||
+        (price !== null && (!Number.isFinite(price) || price < 0)) ||
+        !Number.isSafeInteger(stock) || stock < 0 || !['active','inactive'].includes(status)) {
         return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
     }
+
+    let connection;
     try {
-        const [[currentVariant]] = await pool.execute('SELECT id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
-        if (!currentVariant) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
-        if (Number(currentVariant.stock) !== stock) {
-            return res.status(409).json({ success: false, message: 'Không sửa tồn kho trực tiếp tại form biến thể. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử.' });
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [[product]] = await connection.execute(
+            'SELECT id FROM products WHERE id = ? FOR UPDATE', [productId]
+        );
+        if (!product) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
         }
-        const [result] = await pool.execute('UPDATE product_variants SET sku=?, size=?, color_name=?, color_code=?, price=?, status=? WHERE id=? AND product_id=?', [sku, size, colorName, colorCode, price, status, variantId, productId]);
-        if (!result.affectedRows) {
-            const [existing] = await pool.execute('SELECT id FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
-            if (!existing.length) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        const [[before]] = await connection.execute(
+            'SELECT id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE id=? AND product_id=? FOR UPDATE',
+            [variantId, productId]
+        );
+        if (!before) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
         }
-        await syncProductStock(productId);
-        const [[afterVariant]] = await pool.execute('SELECT id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
-        try {
-            await writeAdminActivityLog(pool, req, {
-                action: "update_variant", entityType: "product_variant", entityId: variantId,
-                description: "Cập nhật biến thể sản phẩm",
-                details: { product_id: productId, before: currentVariant, after: afterVariant }
+        if (Number(before.stock) !== stock) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                message: 'Không sửa tồn kho trực tiếp tại form biến thể. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử.'
             });
-        } catch (auditError) { console.error("Không thể ghi snapshot biến thể:", auditError); }
+        }
+
+        await connection.execute(
+            'UPDATE product_variants SET sku=?, size=?, color_name=?, color_code=?, price=?, status=? WHERE id=? AND product_id=?',
+            [sku, size, colorName, colorCode, price, status, variantId, productId]
+        );
+        await syncProductStock(productId, connection);
+        const [[after]] = await connection.execute(
+            'SELECT id, sku, size, color_name, color_code, price, stock, status FROM product_variants WHERE id=? AND product_id=?',
+            [variantId, productId]
+        );
+        await writeAdminActivityLog(connection, req, {
+            action: "update_variant",
+            entityType: "product_variant",
+            entityId: variantId,
+            description: "Cập nhật biến thể sản phẩm",
+            details: { product_id: productId, before, after }
+        });
+        await connection.commit();
         return res.json({ success: true, message: 'Đã cập nhật biến thể.' });
     } catch (error) {
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback cập nhật biến thể thất bại:", rollbackError);
+            }
+        }
         if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ success: false, message: 'SKU đã tồn tại.' });
         return sendError(res, error, 'Không thể cập nhật biến thể.');
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -783,23 +830,71 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
 router.patch('/products/:id/variants/:variantId/status', async (req, res) => {
     const productId = positiveId(req.params.id);
     const variantId = positiveId(req.params.variantId);
-    const status = String(req.body.status || '').trim();
-    if (!productId || !variantId || !PRODUCT_STATUSES.includes(status)) return res.status(400).json({ success: false, message: 'Biến thể hoặc trạng thái không hợp lệ.' });
+    const status = String((req.body || {}).status || '').trim();
+    if (!productId || !variantId || !PRODUCT_STATUSES.includes(status)) {
+        return res.status(400).json({ success: false, message: 'Biến thể hoặc trạng thái không hợp lệ.' });
+    }
+
+    let connection;
     try {
-        const [[before]] = await pool.execute('SELECT id, sku, size, color_name, status, stock FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
-        if (!before) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
-        await pool.execute('UPDATE product_variants SET status=? WHERE id=? AND product_id=?', [status, variantId, productId]);
-        await syncProductStock(productId);
-        try {
-            await writeAdminActivityLog(pool, req, {
-                action: "change_variant_status", entityType: "product_variant", entityId: variantId,
-                description: "Thay đổi trạng thái biến thể",
-                details: { product_id: productId, before: { status: before.status }, after: { status }, sku: before.sku, size: before.size, color_name: before.color_name, stock: Number(before.stock) }
-            });
-        } catch (auditError) { console.error("Không thể ghi snapshot trạng thái biến thể:", auditError); }
-        return res.json({ success: true, message: 'Đã cập nhật trạng thái biến thể.' });
-    } catch (error) { return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.'); }
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        const [[product]] = await connection.execute(
+            'SELECT id FROM products WHERE id = ? FOR UPDATE', [productId]
+        );
+        if (!product) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm.' });
+        }
+        const [[before]] = await connection.execute(
+            'SELECT id, sku, size, color_name, status, stock FROM product_variants WHERE id=? AND product_id=? FOR UPDATE',
+            [variantId, productId]
+        );
+        if (!before) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        }
+
+        await connection.execute(
+            'UPDATE product_variants SET status=? WHERE id=? AND product_id=?',
+            [status, variantId, productId]
+        );
+        await syncProductStock(productId, connection);
+        const [[afterProduct]] = await connection.execute(
+            'SELECT stock FROM products WHERE id = ?', [productId]
+        );
+        await writeAdminActivityLog(connection, req, {
+            action: "change_variant_status",
+            entityType: "product_variant",
+            entityId: variantId,
+            description: "Thay đổi trạng thái biến thể",
+            details: {
+                product_id: productId,
+                before: { status: before.status, product_stock: null },
+                after: { status, product_stock: Number(afterProduct.stock) },
+                sku: before.sku,
+                size: before.size,
+                color_name: before.color_name,
+                stock: Number(before.stock)
+            }
+        });
+        await connection.commit();
+        return res.json({
+            success: true,
+            message: 'Đã cập nhật biến thể.'
+        });
+    } catch (error) {
+        if (connection) {
+            try { await connection.rollback(); } catch (rollbackError) {
+                console.error("Rollback trạng thái biến thể thất bại:", rollbackError);
+            }
+        }
+        return sendError(res, error, 'Không thể cập nhật trạng thái biến thể.');
+    } finally {
+        if (connection) connection.release();
+    }
 });
+
 // Inventory audit APIs: every manual adjustment is atomic with its ledger entry.
 router.get("/inventory/movements", async (req, res) => {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
