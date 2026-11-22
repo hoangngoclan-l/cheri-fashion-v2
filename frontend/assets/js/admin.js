@@ -245,7 +245,42 @@
             const q = encodeURIComponent($("order-search").value.trim());
             const status = encodeURIComponent($("order-status").value);
             const data = await api("/orders?q=" + q + "&status=" + status);
-            $("orders-table").innerHTML = data.orders.length ? data.orders.map(o => `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(o.recipient_name)}</td><td>${escapeHtml(o.phone)}</td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td><td><span class="pill ${paymentStatusClass(o.payment_status)}">${escapeHtml(paymentStatusText(o.payment_status))}</span></td><td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td><td><select aria-label="Trạng thái đơn ${escapeHtml(o.order_code)}" data-order-status="${o.id}">${[o.order_status, ...(ORDER_TRANSITIONS[o.order_status] || [])].map(s => `<option value="${s}" ${s === o.order_status ? "selected" : ""}>${statusText(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="8" class="empty-row">Không có đơn hàng phù hợp.</td></tr>';
+            $("orders-table").innerHTML = data.orders.length ? data.orders.map(o => `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(o.recipient_name)}</td><td>${escapeHtml(o.phone)}</td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td><td><span class="pill ${paymentStatusClass(o.payment_status)}">${escapeHtml(paymentStatusText(o.payment_status))}</span></td><td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td><td><button type="button" class="table-action" data-order-detail="${o.id}">Chi tiết</button></td><td><select aria-label="Trạng thái đơn ${escapeHtml(o.order_code)}" data-order-status="${o.id}">${[o.order_status, ...(ORDER_TRANSITIONS[o.order_status] || [])].map(s => `<option value="${s}" ${s === o.order_status ? "selected" : ""}>${statusText(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="8" class="empty-row">Không có đơn hàng phù hợp.</td></tr>';
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
+    async function loadOrderDetail(orderId) {
+        try {
+            const data = await api("/orders/" + encodeURIComponent(orderId));
+            const order = data.order;
+            $("order-detail-title").textContent = "Đơn hàng " + (order.order_code || "");
+            $("order-detail-meta").innerHTML = `
+                <div><span>Người nhận</span><strong>${escapeHtml(order.recipient_name)}</strong></div>
+                <div><span>Số điện thoại</span><strong>${escapeHtml(order.phone)}</strong></div>
+                <div><span>Email</span><strong>${escapeHtml(order.email || "—")}</strong></div>
+                <div><span>Địa chỉ giao hàng</span><strong>${escapeHtml(order.shipping_address || "—")}</strong></div>
+                <div><span>Phương thức thanh toán</span><strong>${escapeHtml(order.payment_method || "—")}</strong></div>
+                <div><span>Trạng thái thanh toán</span><strong>${escapeHtml(paymentStatusText(order.payment_status))}</strong></div>
+                <div><span>Trạng thái đơn</span><strong>${escapeHtml(statusText(order.order_status))}</strong></div>
+                <div><span>Ngày đặt</span><strong>${escapeHtml(date(order.created_at))}</strong></div>
+            `;
+            $("order-detail-items").innerHTML = (data.items || []).length ? data.items.map(item => `
+                <tr>
+                    <td><strong>${escapeHtml(item.product_name)}</strong><small class="detail-subline">SKU: ${escapeHtml(item.sku || "—")} · SP #${escapeHtml(item.product_id)}</small></td>
+                    <td>${escapeHtml(item.size || "—")}</td>
+                    <td>${escapeHtml(item.color_name || "—")}</td>
+                    <td>${money(item.unit_price)}</td>
+                    <td>${Number(item.quantity || 0)}</td>
+                    <td>${money(item.line_total)}</td>
+                </tr>`).join("") : '<tr><td colspan="6" class="empty-row">Đơn hàng không có dòng sản phẩm.</td></tr>';
+            $("order-detail-totals").innerHTML = `
+                <div><span>Tạm tính</span><strong>${money(order.subtotal)}</strong></div>
+                <div><span>Phí vận chuyển</span><strong>${money(order.shipping_fee)}</strong></div>
+                <div><span>Giảm giá</span><strong>${money(order.discount_amount)}</strong></div>
+                <div class="detail-grand-total"><span>Tổng thanh toán</span><strong>${money(order.total_amount)}</strong></div>
+            `;
+            $("order-detail-note").textContent = order.customer_note || "Không có ghi chú.";
+            $("order-detail-dialog").showModal();
         } catch (error) { alertMessage(error.message, true); }
     }
 
@@ -262,6 +297,8 @@
         document.querySelectorAll("[data-view]").forEach(link => link.addEventListener("click", event => { event.preventDefault(); setView(link.dataset.view); }));
         document.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => setView(button.dataset.go)));
         $("admin-logout").addEventListener("click", () => CHERI_AUTH.logout());
+        $("close-order-detail").addEventListener("click", () => $("order-detail-dialog").close());
+        $("close-order-detail-footer").addEventListener("click", () => $("order-detail-dialog").close());
         $("product-search").addEventListener("input", debounce(loadProducts, 300));
         $("order-search").addEventListener("input", debounce(loadOrders, 300));
         $("order-status").addEventListener("change", loadOrders);
@@ -289,6 +326,8 @@
             const toggleVariantButton = event.target.closest("[data-toggle-variant]");
             const remove = event.target.closest("[data-delete-product]");
             const customer = event.target.closest("[data-customer-id]");
+            const orderDetail = event.target.closest("[data-order-detail]");
+            if (orderDetail) { await loadOrderDetail(orderDetail.dataset.orderDetail); return; }
             if (edit) openProduct(products.find(p => String(p.id) === edit.dataset.editProduct));
             if (variants) {
                 try { await loadVariants(variants.dataset.variantProduct); }
