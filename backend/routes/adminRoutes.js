@@ -375,6 +375,28 @@ router.get("/orders/:id", async (req, res) => {
     }
 });
 
+// GET /api/admin/orders/:id/history — lịch sử thay đổi trạng thái.
+router.get("/orders/:id/history", async (req, res) => {
+    const id = positiveId(req.params.id);
+    if (!id) return res.status(400).json({ success: false, message: "Mã đơn hàng không hợp lệ." });
+    try {
+        const [[order]] = await pool.execute("SELECT id FROM orders WHERE id = ? LIMIT 1", [id]);
+        if (!order) return res.status(404).json({ success: false, message: "Không tìm thấy đơn hàng." });
+        const [history] = await pool.execute(`
+            SELECT h.id, h.from_status, h.to_status, h.created_at,
+                   u.full_name AS changed_by_name
+            FROM order_status_history h
+            LEFT JOIN users u ON u.id = h.changed_by
+            WHERE h.order_id = ?
+            ORDER BY h.created_at DESC, h.id DESC
+            LIMIT 100
+        `, [id]);
+        return res.json({ success: true, history });
+    } catch (error) {
+        return sendError(res, error, "Không thể tải lịch sử đơn hàng. Hãy kiểm tra migration lịch sử trạng thái đã được áp dụng.");
+    }
+});
+
 // PATCH /api/admin/orders/:id/status
 router.patch("/orders/:id/status", async (req, res) => {
     const id = positiveId(req.params.id);
@@ -569,6 +591,12 @@ router.patch("/orders/:id/status", async (req, res) => {
                 "Không cập nhật được đúng một đơn hàng. Giao dịch đã bị hủy."
             );
         }
+
+        await connection.execute(
+            `INSERT INTO order_status_history (order_id, from_status, to_status, changed_by)
+             VALUES (?, ?, ?, ?)`,
+            [id, current, status, req.user?.id || null]
+        );
 
         await commitTransaction();
 
