@@ -38,7 +38,15 @@ router.get("/dashboard", async (req, res) => {
         const [[sales]] = await pool.execute(`
             SELECT
                 COUNT(*) AS total_orders,
-                COALESCE(SUM(CASE WHEN order_status <> 'cancelled' THEN total_amount ELSE 0 END), 0) AS gross_revenue,
+                COALESCE(SUM(CASE
+                    WHEN payment_status = 'paid' AND order_status <> 'cancelled'
+                    THEN total_amount ELSE 0 END), 0) AS collected_revenue,
+                COALESCE(SUM(CASE
+                    WHEN payment_status = 'unpaid' AND order_status <> 'cancelled'
+                    THEN total_amount ELSE 0 END), 0) AS unpaid_amount,
+                SUM(CASE
+                    WHEN payment_status = 'unpaid' AND order_status <> 'cancelled'
+                    THEN 1 ELSE 0 END) AS unpaid_orders,
                 SUM(CASE WHEN order_status = 'pending' THEN 1 ELSE 0 END) AS pending_orders,
                 SUM(CASE WHEN DATE(created_at) = CURDATE() THEN 1 ELSE 0 END) AS today_orders
             FROM orders
