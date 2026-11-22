@@ -72,6 +72,22 @@
     }
     function showError(error) { $("cheri-chat-error").textContent = error.message || "Đã xảy ra lỗi."; }
     function clearError() { $("cheri-chat-error").textContent = ""; }
+
+    async function refreshHistory() {
+        const state = readState();
+        if (!state.conversationId || $("cheri-chat-panel")?.hidden) return;
+        try {
+            const data = await api("/api/chat/conversations/" + encodeURIComponent(state.conversationId) + "/messages", {}, state);
+            const box = $("cheri-chat-messages");
+            const nearBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 70;
+            box.innerHTML = "";
+            data.messages.forEach(message => bubble(message.sender_type, message.content));
+            if (nearBottom) box.scrollTop = box.scrollHeight;
+        } catch (error) {
+            // Không làm gián đoạn chat nếu mạng tạm thời mất kết nối.
+        }
+    }
+
     async function initialize() {
         const state = readState();
         if (state.conversationId) {
@@ -128,6 +144,7 @@
             sendMessage(value);
         });
         $("cheri-chat-human").addEventListener("click", () => sendMessage("Tôi muốn gặp nhân viên tư vấn trực tiếp."));
+        window.setInterval(refreshHistory, 7000);
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount, { once: true });
     else mount();
