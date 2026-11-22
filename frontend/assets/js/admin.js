@@ -63,7 +63,7 @@
         $("page-title").textContent = ({dashboard:"Tổng quan",products:"Quản lý sản phẩm",orders:"Quản lý đơn hàng",customers:"Quản lý khách hàng"})[view] || "Quản trị";
         if (view === "dashboard") loadDashboard();
         if (view === "products") loadProducts();
-        if (view === "orders") loadOrders();
+        if (view === "orders") { loadPaymentSummary(); loadOrders(); }
         if (view === "customers") loadCustomers();
     }
 
@@ -241,11 +241,28 @@
         } catch (error) { alertMessage(error.message, true); }
     }
 
+    async function loadPaymentSummary() {
+        try {
+            const data = await api("/payments/summary");
+            const totals = data.totals || {};
+            $("payment-summary").innerHTML = `
+                <article class="payment-summary-card"><span>Đã thu</span><strong>${money(totals.collected_amount)}</strong><small>${Number(totals.paid_orders || 0).toLocaleString("vi-VN")} đơn</small></article>
+                <article class="payment-summary-card"><span>Chưa thu</span><strong>${money(totals.outstanding_amount)}</strong><small>${Number(totals.unpaid_orders || 0).toLocaleString("vi-VN")} đơn · không tính đơn đã hủy</small></article>
+                <article class="payment-summary-card"><span>Đơn đã hủy</span><strong>${Number(totals.cancelled_orders || 0).toLocaleString("vi-VN")}</strong><small>Hiển thị riêng, không cộng vào đối soát</small></article>
+            `;
+            $("payment-breakdown").innerHTML = (data.breakdown || []).length ? data.breakdown.map(row =>
+                `<span class="payment-breakdown-item">${escapeHtml(row.payment_method || "Chưa xác định")} · ${escapeHtml(paymentStatusText(row.payment_status))}: <strong>${Number(row.order_count || 0)} đơn</strong> · ${money(row.active_amount)}${Number(row.cancelled_count || 0) ? ` · ${Number(row.cancelled_count)} đã hủy` : ""}</span>`
+            ).join("") : '<span class="empty-row">Chưa có dữ liệu thanh toán.</span>';
+        } catch (error) { alertMessage(error.message, true); }
+    }
+
     async function loadOrders() {
         try {
             const q = encodeURIComponent($("order-search").value.trim());
             const status = encodeURIComponent($("order-status").value);
-            const data = await api("/orders?q=" + q + "&status=" + status);
+            const method = encodeURIComponent($("order-payment-method").value);
+            const payment = encodeURIComponent($("order-payment-status").value);
+            const data = await api("/orders?q=" + q + "&status=" + status + "&payment_method=" + method + "&payment_status=" + payment);
             $("orders-table").innerHTML = data.orders.length ? data.orders.map(o => `<tr><td><strong>${escapeHtml(o.order_code)}</strong></td><td>${escapeHtml(o.recipient_name)}</td><td>${escapeHtml(o.phone)}</td><td>${date(o.created_at)}</td><td>${money(o.total_amount)}</td><td><span class="pill ${paymentStatusClass(o.payment_status)}">${escapeHtml(paymentStatusText(o.payment_status))}</span></td><td><span class="pill ${statusClass(o.order_status)}">${statusText(o.order_status)}</span></td><td><button type="button" class="table-action" data-order-detail="${o.id}">Chi tiết</button></td><td><select aria-label="Trạng thái đơn ${escapeHtml(o.order_code)}" data-order-status="${o.id}">${[o.order_status, ...(ORDER_TRANSITIONS[o.order_status] || [])].map(s => `<option value="${s}" ${s === o.order_status ? "selected" : ""}>${statusText(s)}</option>`).join("")}</select></td></tr>`).join("") : '<tr><td colspan="9" class="empty-row">Không có đơn hàng phù hợp.</td></tr>';
         } catch (error) { alertMessage(error.message, true); }
     }
@@ -334,7 +351,7 @@
         $("close-order-detail-footer").addEventListener("click", () => $("order-detail-dialog").close());
         $("product-search").addEventListener("input", debounce(loadProducts, 300));
         $("order-search").addEventListener("input", debounce(loadOrders, 300));
-        $("order-status").addEventListener("change", loadOrders);
+        $("order-status").addEventListener("change", loadOrders);\n        $("order-payment-method").addEventListener("change", loadOrders);\n        $("order-payment-status").addEventListener("change", loadOrders);
         $("customer-search").addEventListener("input", debounce(loadCustomers, 300));
         $("add-product").addEventListener("click", () => openProduct());
         $("close-product-dialog").addEventListener("click", () => $("product-dialog").close());
