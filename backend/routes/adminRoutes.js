@@ -291,6 +291,12 @@ router.put("/products/:id", async (req, res) => {
             }
         }
 
+        const [[stockState]] = await pool.execute("SELECT stock FROM products WHERE id = ? LIMIT 1", [id]);
+        if (!stockState) return res.status(404).json({ success: false, message: "Không tìm thấy sản phẩm." });
+        const [[variantSummaryBefore]] = await pool.execute("SELECT COUNT(*) AS total FROM product_variants WHERE product_id = ?", [id]);
+        if (Number(variantSummaryBefore.total) === 0 && Number(stockState.stock) !== stock) {
+            return res.status(409).json({ success: false, message: "Không sửa tồn kho trực tiếp tại form sản phẩm. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử." });
+        }
         const [result] = await pool.execute(`
             UPDATE products SET product_code=?, name=?, category=?, category_slug=?, price=?, old_price=?,
                 image=?, description=?, is_new=?, is_sale=?, stock=?, status=? WHERE id=?
@@ -396,7 +402,12 @@ router.put('/products/:id/variants/:variantId', async (req, res) => {
         return res.status(400).json({ success: false, message: 'Thông tin biến thể không hợp lệ.' });
     }
     try {
-        const [result] = await pool.execute('UPDATE product_variants SET sku=?, size=?, color_name=?, color_code=?, price=?, stock=?, status=? WHERE id=? AND product_id=?', [sku, size, colorName, colorCode, price, stock, status, variantId, productId]);
+        const [[currentVariant]] = await pool.execute('SELECT stock FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
+        if (!currentVariant) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
+        if (Number(currentVariant.stock) !== stock) {
+            return res.status(409).json({ success: false, message: 'Không sửa tồn kho trực tiếp tại form biến thể. Hãy dùng chức năng điều chỉnh kho để lưu lịch sử.' });
+        }
+        const [result] = await pool.execute('UPDATE product_variants SET sku=?, size=?, color_name=?, color_code=?, price=?, status=? WHERE id=? AND product_id=?', [sku, size, colorName, colorCode, price, status, variantId, productId]);
         if (!result.affectedRows) {
             const [existing] = await pool.execute('SELECT id FROM product_variants WHERE id=? AND product_id=? LIMIT 1', [variantId, productId]);
             if (!existing.length) return res.status(404).json({ success: false, message: 'Không tìm thấy biến thể.' });
@@ -870,6 +881,7 @@ router.patch("/orders/:id/status", async (req, res) => {
                         throw new Error("Không tìm thấy biến thể của đơn hàng; đã rollback để tránh hoàn kho sai.");
                     }
 
+                    const variantStockBefore = Number(variantRows[0].stock);
                     const [restockResult] = await connection.execute(
                         "UPDATE product_variants SET stock = stock + ? WHERE id = ? AND product_id = ?",
                         [item.quantity, item.variant_id, item.product_id]
@@ -878,6 +890,11 @@ router.patch("/orders/:id/status", async (req, res) => {
                     if (restockResult.affectedRows !== 1) {
                         throw new Error("Không thể hoàn kho biến thể. Giao dịch đã bị hủy để bảo toàn dữ liệu.");
                     }
+                    await connection.execute(`
+                        INSERT INTO inventory_movements
+                          (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, note, actor_user_id)
+                        VALUES (?, ?, 'order_return', ?, ?, ?, 'order', ?, ?, ?)
+                    `, [item.product_id, item.variant_id, item.quantity, variantStockBefore, variantStockBefore + Number(item.quantity), id, "Hoàn kho do hủy đơn hàng", req.user?.id || null]);
 
                     await connection.execute(
                         `UPDATE products
@@ -890,6 +907,8 @@ router.patch("/orders/:id/status", async (req, res) => {
                         [item.product_id, item.product_id]
                     );
                 } else {
+                    const [productStockRows] = await connection.execute("SELECT stock FROM products WHERE id = ? FOR UPDATE", [item.product_id]);
+                    const productStockBefore = Number(productStockRows[0]?.stock);
                     const [restockResult] = await connection.execute(
                         "UPDATE products SET stock = stock + ? WHERE id = ?",
                         [item.quantity, item.product_id]
@@ -898,6 +917,11 @@ router.patch("/orders/:id/status", async (req, res) => {
                     if (restockResult.affectedRows !== 1) {
                         throw new Error("Không thể hoàn kho sản phẩm. Giao dịch đã bị hủy để bảo toàn dữ liệu.");
                     }
+                    await connection.execute(`
+                        INSERT INTO inventory_movements
+                          (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, note, actor_user_id)
+                        VALUES (?, NULL, 'order_return', ?, ?, ?, 'order', ?, ?, ?)
+                    `, [item.product_id, item.quantity, productStockBefore, productStockBefore + Number(item.quantity), id, "Hoàn kho do hủy đơn hàng", req.user?.id || null]);
                 }
             }
         }
