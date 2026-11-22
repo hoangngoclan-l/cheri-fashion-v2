@@ -490,38 +490,42 @@ router.post("/", optionalAuthMiddleware, async (req, res) => {
       );
 
       if (item.variantId !== null) {
-        const [variantStockResult] = await connection.execute(
-          `UPDATE product_variants
-           SET stock = stock - ?
+        const [beforeRows] = await connection.execute(
+          "SELECT stock FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE",
+          [item.variantId, item.productId]
+        );
+        const stockBefore = Number(beforeRows[0]?.stock);
+        const [stockResult] = await connection.execute(
+          `UPDATE product_variants SET stock = stock - ?
            WHERE id = ? AND product_id = ? AND status = 'active' AND stock >= ?`,
           [item.quantity, item.variantId, item.productId, item.quantity]
         );
-
-        if (variantStockResult.affectedRows !== 1) {
-          throw new Error(`Không thể trừ tồn kho biến thể của "${item.productName}".`);
-        }
-
+        if (stockResult.affectedRows !== 1) throw new Error(`Không thể trừ tồn kho biến thể của "${item.productName}".`);
         await connection.execute(
-          `UPDATE products
-           SET stock = (
-             SELECT COALESCE(SUM(stock), 0)
-             FROM product_variants
+          `UPDATE products SET stock = (
+             SELECT COALESCE(SUM(stock), 0) FROM product_variants
              WHERE product_id = ? AND status = 'active'
-           )
-           WHERE id = ?`,
+           ) WHERE id = ?`,
           [item.productId, item.productId]
         );
+        await connection.execute(`
+          INSERT INTO inventory_movements
+            (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, note)
+          VALUES (?, ?, 'order_out', ?, ?, ?, 'order', ?, ?)
+        `, [item.productId, item.variantId, item.quantity, stockBefore, stockBefore - item.quantity, orderId, "Xuất kho khi tạo đơn hàng"]);
       } else {
+        const [beforeRows] = await connection.execute("SELECT stock FROM products WHERE id = ? FOR UPDATE", [item.productId]);
+        const stockBefore = Number(beforeRows[0]?.stock);
         const [stockResult] = await connection.execute(
-          `UPDATE products
-           SET stock = stock - ?
-           WHERE id = ? AND stock >= ?`,
+          `UPDATE products SET stock = stock - ? WHERE id = ? AND stock >= ?`,
           [item.quantity, item.productId, item.quantity]
         );
-
-        if (stockResult.affectedRows !== 1) {
-          throw new Error(`Không thể cập nhật tồn kho sản phẩm "${item.productName}".`);
-        }
+        if (stockResult.affectedRows !== 1) throw new Error(`Không thể cập nhật tồn kho sản phẩm "${item.productName}".`);
+        await connection.execute(`
+          INSERT INTO inventory_movements
+            (product_id, variant_id, movement_type, quantity, stock_before, stock_after, reference_type, reference_id, note)
+          VALUES (?, NULL, 'order_out', ?, ?, ?, 'order', ?, ?)
+        `, [item.productId, item.quantity, stockBefore, stockBefore - item.quantity, orderId, "Xuất kho khi tạo đơn hàng"]);
       }
     }
 
