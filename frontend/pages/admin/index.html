@@ -63,6 +63,22 @@
             </form>
         </div>
     </dialog>
+    <dialog id="order-detail-dialog" class="product-dialog order-detail-dialog">
+        <div class="order-detail-content">
+            <div class="dialog-heading">
+                <div><p class="eyebrow">ORDER INFORMATION</p><h2 id="order-detail-title">Chi tiết đơn hàng</h2></div>
+                <button type="button" class="icon-close" id="close-order-detail" aria-label="Đóng">×</button>
+            </div>
+            <div id="order-detail-meta" class="order-detail-meta"></div>
+            <h3 class="order-detail-section-title">Sản phẩm trong đơn</h3>
+            <div class="table-scroll order-detail-table-wrap">
+                <table><thead><tr><th>Sản phẩm / SKU</th><th>Size</th><th>Màu</th><th>Đơn giá</th><th>SL</th><th>Thành tiền</th></tr></thead><tbody id="order-detail-items"><tr><td colspan="6" class="empty-row">Đang tải...</td></tr></tbody></table>
+            </div>
+            <div id="order-detail-totals" class="order-detail-totals"></div>
+            <div class="order-detail-note"><strong>Ghi chú khách hàng</strong><p id="order-detail-note">—</p></div>
+            <div class="dialog-actions"><button type="button" class="button button-primary" id="close-order-detail-footer">Đóng</button></div>
+        </div>
+    </dialog>
     <script src="../../assets/js/auth.js"></script><script src="../../assets/js/admin.js"></script>
 </body>
 </html>
