@@ -454,7 +454,7 @@
             const data = await api("/inventory/movements?" + params.toString());
             $("inventory-movements-table").innerHTML = data.movements.length ? data.movements.map(m => {
                 const typeLabels = {adjustment_in:"Nhập kho",adjustment_out:"Xuất kho",order_out:"Xuất theo đơn",order_return:"Hoàn kho"};
-                const ref = m.reference_type === "order" ? "Đơn #" + m.reference_id : m.reference_type === "admin_adjustment" ? "Điều chỉnh Admin" : "—";
+                const ref = m.reference_type === "order" ? "Đơn #" + m.reference_id : m.reference_type === "admin_adjustment" ? "Điều chỉnh Admin" : m.reference_type === "opening_balance" ? "Tồn kho khởi tạo" : "—";
                 return `<tr><td>${new Date(m.created_at).toLocaleString("vi-VN")}</td><td><strong>${escapeHtml(m.product_name || ("Sản phẩm #" + m.product_id))}</strong><br><small>${escapeHtml([m.sku,m.size,m.color_name].filter(Boolean).join(" · ") || m.product_code || "")}</small></td><td>${escapeHtml(typeLabels[m.movement_type] || m.movement_type)}</td><td>${Number(m.quantity)}</td><td>${Number(m.stock_before)}</td><td>${Number(m.stock_after)}</td><td>${escapeHtml(ref)}</td><td>${escapeHtml(m.actor_name || (m.actor_user_id ? "Tài khoản #" + m.actor_user_id : "Hệ thống"))}</td><td>${escapeHtml(m.note || "—")}</td></tr>`;
             }).join("") : '<tr><td colspan="9" class="empty-row">Chưa có lịch sử biến động kho.</td></tr>';
             $("inventory-page-label").textContent = `Trang ${data.pagination.page} / ${Math.max(1,data.pagination.totalPages)} · ${data.pagination.total} bản ghi`;
