@@ -67,3 +67,26 @@
 .customer-orders-heading h3{margin:0;font-size:14px}
 .customer-name-action{padding:0;border:0;background:none;color:var(--ink);font:inherit;font-weight:650;text-align:left;cursor:pointer}
 @media(max-width:680px){.customer-detail-summary{grid-template-columns:repeat(2,minmax(0,1fr))}.customer-detail-content{padding:14px}}
+
+
+/* Business reports */
+.reports-toolbar{display:grid;grid-template-columns:minmax(220px,1fr) auto;align-items:end;gap:18px}
+.reports-toolbar h2{margin:0;font:600 21px 'Playfair Display',serif}
+.reports-filter{display:flex;align-items:end;gap:9px;flex-wrap:wrap}
+.reports-filter label{display:grid;gap:5px;color:var(--muted);font-size:10px}
+.reports-filter input{min-height:38px;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink);font:inherit}
+.reports-metrics{margin-top:18px}
+.reports-two-column{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.report-daily-chart{display:flex;align-items:stretch;gap:10px;min-height:220px;overflow-x:auto;padding:8px 2px 4px}
+.report-day{display:flex;flex:1 0 76px;min-width:76px;flex-direction:column;align-items:center;justify-content:flex-end;gap:7px;text-align:center}
+.report-bar-track{display:flex;align-items:flex-end;width:30px;height:125px;border-radius:7px;background:var(--canvas);overflow:hidden}
+.report-bar{width:100%;min-height:2px;border-radius:7px 7px 0 0;background:var(--pink)}
+.report-day strong{font-size:10px;white-space:nowrap}
+.report-day span,.report-day small{font-size:9px;color:var(--muted)}
+.report-status-list{display:grid;gap:14px}
+.report-status-row>div:first-child{display:flex;justify-content:space-between;gap:12px;margin-bottom:6px;font-size:11px}
+.report-status-row>div:first-child span{color:var(--muted)}
+.report-status-track{height:7px;border-radius:10px;background:var(--canvas);overflow:hidden}
+.report-status-track span{display:block;height:100%;border-radius:10px;background:var(--pink)}
+@media(max-width:900px){.reports-toolbar{grid-template-columns:1fr}.reports-filter{justify-content:flex-start}}
+@media(max-width:700px){.admin-nav{grid-template-columns:repeat(3,minmax(0,1fr))}.reports-two-column{grid-template-columns:1fr}.reports-filter{display:grid;grid-template-columns:1fr 1fr}.reports-filter button{grid-column:1/-1}.report-daily-chart{min-height:190px}}
